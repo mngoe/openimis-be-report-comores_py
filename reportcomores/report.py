@@ -7,7 +7,7 @@ report_definitions = [
         "engine": 0,
         "default_report": rptBeneficiaryAmg.template,
         "description": "Carte AMG",
-        "module": "insuree",
+        "module": "reportcomores",
         "python_query": generate_carte_amg_query,
         "permission": ["131215"],
     }

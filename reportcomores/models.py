@@ -3,11 +3,11 @@ from report.services import run_stored_proc_report
 from insuree.models import Insuree, Family
 import qrcode
 from io import BytesIO
-import base64
+import base64, time, datetime
+from insuree.models import InsureePolicy
 
-# Create your models here.
 def generate_carte_amg_query(user, **kwargs):
-    print("On the go ", kwargs)
+    print("Carte AMG ", kwargs)
     ids = kwargs.get("insureeids", [])
     insurees_ids = []
     if ids:
@@ -21,9 +21,12 @@ def generate_carte_amg_query(user, **kwargs):
     insurees_data = []
     for insuree_obj in insuree_list:
         data = {}
+        maintenant = str(time.strftime("%d/%m/%Y"))
+        data["dateEmission"] = maintenant
         mothers_name = ""
         fathers_name = ""
-        data["chfid"] = insuree_obj.chf_id
+        data["chfid"] = ""
+        data["chfid2"] = ""
         insuree_rel = ""
         if insuree_obj.relationship:
             insuree_rel = str(insuree_obj.relationship.relation).lower()
@@ -38,14 +41,26 @@ def generate_carte_amg_query(user, **kwargs):
                     if membre.relationship:
                         if str(membre.relationship.relation).lower() == "father":
                             fathers_name = membre.last_name + " " + membre.other_names
+                            data["chfid"] = membre.chf_id
                             father_ok = True
                         if str(membre.relationship.relation).lower() == "mother":
                             mothers_name = membre.last_name + " " + membre.other_names
+                            data["chfid2"] = membre.chf_id
                             mother_ok = True
                         if mother_ok and father_ok:
                             break
         data["FullFathersName"] = fathers_name
         data["FullMothersName"] = mothers_name
+        insure_policy = InsureePolicy.objects.filter(
+            insuree=insuree_obj.id, policy__status=2).order_by('-id')
+        data["DateExpiration"] = ""
+        if insure_policy:
+            policy = insure_policy[0]
+            if policy.expiry_date:
+                format = "%Y-%m-%d"
+                expiry_date = datetime.datetime.strptime(str(policy.expiry_date), format)
+                date_str = expiry_date.strftime("%d/%m/%Y")
+                data["DateExpiration"] = str(date_str)
         # Create qr code instance
         qr = qrcode.QRCode()
         # The data that you want to store
