@@ -3,7 +3,7 @@ from report.services import run_stored_proc_report
 from insuree.models import Insuree, Family
 import qrcode
 from io import BytesIO
-import base64, time, datetime
+import base64, core, datetime
 from insuree.models import InsureePolicy
 
 def generate_carte_amg_query(user, **kwargs):
@@ -21,8 +21,6 @@ def generate_carte_amg_query(user, **kwargs):
     insurees_data = []
     for insuree_obj in insuree_list:
         data = {}
-        maintenant = str(time.strftime("%d/%m/%Y"))
-        data["dateEmission"] = maintenant
         mothers_name = ""
         fathers_name = ""
         data["chfid"] = ""
@@ -51,21 +49,24 @@ def generate_carte_amg_query(user, **kwargs):
                             break
         data["FullFathersName"] = fathers_name
         data["FullMothersName"] = mothers_name
-        insure_policy = InsureePolicy.objects.filter(
+        insure_policies = InsureePolicy.objects.filter(
             insuree=insuree_obj.id, policy__status=2).order_by('-id')
         data["DateExpiration"] = ""
-        if insure_policy:
-            policy = insure_policy[0]
-            if policy.expiry_date:
-                format = "%Y-%m-%d"
-                expiry_date = datetime.datetime.strptime(str(policy.expiry_date), format)
-                date_str = expiry_date.strftime("%d/%m/%Y")
-                data["DateExpiration"] = str(date_str)
+        data["dateEmission"] = ""
+        if insure_policies:
+            insure_policy = insure_policies[0]
+            policy_date = datetime.datetime.strptime(str(insure_policy.policy.validity_from), "%Y-%m-%d %H:%M:%S.%f")
+            policy_date_str = policy_date.strftime("%d/%m/%Y")
+            data["dateEmission"] = str(policy_date_str)
+            expiry_date = insure_policy.policy.validity_from + core.datetimedelta(years=5)
+            new_expiry_date = datetime.datetime.strptime(str(expiry_date), "%Y-%m-%d %H:%M:%S.%f")
+            expiry_date_str = new_expiry_date.strftime("%d/%m/%Y")
+            data["DateExpiration"] = str(expiry_date_str)
         # Create qr code instance
         qr = qrcode.QRCode()
         # The data that you want to store
         # Add data
-        qr.add_data(data)
+        qr.add_data({"CHFID: " + str(data["chfid"])})
 
         # Generate the QR Code
         qr.make()
