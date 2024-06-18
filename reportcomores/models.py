@@ -21,31 +21,27 @@ def generate_carte_amg_query(user, **kwargs):
     insurees_data = []
     for insuree_obj in insuree_list:
         data = {}
-        mothers_name = ""
+        conjointe = ""
         chef_menage = ""
         data["chfid"] = ""
         data["chfid2"] = ""
-        insuree_rel = ""
         chef_menage = insuree_obj.last_name + " " + insuree_obj.other_names
         data["chfid"] = insuree_obj.chf_id
-        if insuree_obj.relationship:
-            insuree_rel = str(insuree_obj.relationship.relation).lower()
-        if insuree_rel not in ["father", "mother"]:
-            if insuree_obj.family:
-                members = Insuree.objects.filter(
-                    family_id=insuree_obj.family.id
-                ).exclude(id=insuree_obj.id)
-                mother_ok = False
-                for membre in members:
-                    if membre.relationship:
-                        if str(membre.relationship.relation).lower() == "mother":
-                            mothers_name = membre.last_name + " " + membre.other_names
-                            data["chfid2"] = membre.chf_id
-                            mother_ok = True
-                        if mother_ok:
-                            break
+        if insuree_obj.family:
+            members = Insuree.objects.filter(
+                family_id=insuree_obj.family.id
+            ).exclude(id=insuree_obj.id)
+            mother_ok = False
+            for membre in members:
+                if membre.relationship:
+                    if str(membre.relationship.relation).lower() in ["epouse", "épouse", "wife"]:
+                        conjointe = membre.last_name + " " + membre.other_names
+                        data["chfid2"] = membre.chf_id
+                        mother_ok = True
+                    if mother_ok:
+                        break
         data["FullFathersName"] = chef_menage
-        data["FullMothersName"] = mothers_name
+        data["FullMothersName"] = conjointe
         insure_policies = InsureePolicy.objects.filter(
             insuree=insuree_obj.id, policy__status=2).order_by('-id')
         data["DateExpiration"] = ""
