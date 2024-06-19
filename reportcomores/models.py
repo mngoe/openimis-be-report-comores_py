@@ -34,7 +34,7 @@ def generate_carte_amg_query(user, **kwargs):
             mother_ok = False
             for membre in members:
                 if membre.relationship:
-                    if str(membre.relationship.relation).lower() in ["epouse", "épouse", "wife"]:
+                    if str(membre.relationship.relation).lower() in ["spouse", "époux"]:
                         conjointe = membre.last_name + " " + membre.other_names
                         data["chfid2"] = membre.chf_id
                         mother_ok = True
