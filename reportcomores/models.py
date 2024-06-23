@@ -29,7 +29,8 @@ def generate_carte_amg_query(user, **kwargs):
         data["chfid"] = insuree_obj.chf_id
         if insuree_obj.family:
             members = Insuree.objects.filter(
-                family_id=insuree_obj.family.id
+                family_id=insuree_obj.family.id,
+                validity_to__isnull=True
             ).exclude(id=insuree_obj.id)
             mother_ok = False
             for membre in members:
