@@ -9,6 +9,6 @@ report_definitions = [
         "description": "Carte AMG",
         "module": "reportcomores",
         "python_query": generate_carte_amg_query,
-        "permission": ["131217"],
+        "permission": ["131215"],
     }
 ]
