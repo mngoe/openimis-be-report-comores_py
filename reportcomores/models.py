@@ -49,13 +49,14 @@ def generate_carte_amg_query(user, **kwargs):
         data["dateEmission"] = ""
         if insure_policies:
             insure_policy = insure_policies[0]
-            policy_date = datetime.datetime.strptime(str(insure_policy.policy.enroll_date), "%Y-%m-%d %H:%M:%S.%f")
-            policy_date_str = policy_date.strftime("%d/%m/%Y")
-            data["dateEmission"] = str(policy_date_str)
-            expiry_date = insure_policy.policy.enroll_date + core.datetimedelta(years=5)
-            new_expiry_date = datetime.datetime.strptime(str(expiry_date), "%Y-%m-%d %H:%M:%S.%f")
-            expiry_date_str = new_expiry_date.strftime("%d/%m/%Y")
-            data["DateExpiration"] = str(expiry_date_str)
+            if insure_policy.policy.creation_date:
+                policy_date = datetime.datetime.strptime(str(insure_policy.policy.creation_date), "%Y-%m-%d %H:%M:%S.%f")
+                policy_date_str = policy_date.strftime("%d/%m/%Y")
+                data["dateEmission"] = str(policy_date_str)
+                expiry_date = insure_policy.policy.creation_date + core.datetimedelta(years=5)
+                new_expiry_date = datetime.datetime.strptime(str(expiry_date), "%Y-%m-%d %H:%M:%S.%f")
+                expiry_date_str = new_expiry_date.strftime("%d/%m/%Y")
+                data["DateExpiration"] = str(expiry_date_str)
         # Create qr code instance
         qr = qrcode.QRCode()
         # The data that you want to store
