@@ -23,10 +23,9 @@ def generate_carte_amg_query(user, **kwargs):
         data = {}
         conjointe = ""
         chef_menage = ""
-        data["chfid"] = ""
-        data["chfid2"] = ""
+        chfid2 = ""
         chef_menage = insuree_obj.last_name + " " + insuree_obj.other_names
-        data["chfid"] = insuree_obj.chf_id
+        chfid = insuree_obj.chf_id
         if insuree_obj.family:
             members = Insuree.objects.filter(
                 family_id=insuree_obj.family.id,
@@ -37,17 +36,21 @@ def generate_carte_amg_query(user, **kwargs):
                 if membre.relationship:
                     if str(membre.relationship.relation).lower() in ["spouse", "époux"]:
                         conjointe = membre.last_name + " " + membre.other_names
-                        data["chfid2"] = membre.chf_id
+                        chfid2 = membre.chf_id
                         mother_ok = True
                     if mother_ok:
                         break
         data["FullFathersName"] = chef_menage
         data["FullMothersName"] = conjointe
+        data["chfid"] = chfid
+        data["chfid2"] = chfid2
         if insuree_obj.family:
             if insuree_obj.family.parent:
                 # We exchange the head and the spouse
                 data["FullFathersName"] = conjointe
                 data["FullMothersName"] = chef_menage
+                data["chfid"] = chfid2
+                data["chfid2"] = chfid
         insure_policies = InsureePolicy.objects.filter(
             insuree=insuree_obj.id, policy__status=2).order_by('-id')
         data["DateExpiration"] = ""
