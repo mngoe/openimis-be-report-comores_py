@@ -40,6 +40,8 @@ def generate_carte_amg_query(user, **kwargs):
                         mother_ok = True
                     if mother_ok:
                         break
+        chef_menage = chef_menage[:19] #19 Caracteres max
+        conjointe = conjointe[:19] #19 Caracteres max
         data["FullFathersName"] = chef_menage
         data["FullMothersName"] = conjointe
         data["chfid"] = chfid
