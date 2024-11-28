@@ -21,10 +21,13 @@ def generate_carte_amg_query(user, **kwargs):
     insurees_data = []
     for insuree_obj in insuree_list:
         data = {}
-        conjointe = ""
-        chef_menage = ""
+        nom_conjointe = ""
+        prenom_conjointe = ""
+        nom_chef_menage = ""
+        prenom_chef_menage = ""
         chfid2 = ""
-        chef_menage = insuree_obj.last_name + " " + insuree_obj.other_names
+        nom_chef_menage = insuree_obj.last_name
+        prenom_chef_menage = insuree_obj.other_names
         chfid = insuree_obj.chf_id
         if insuree_obj.family:
             members = Insuree.objects.filter(
@@ -35,22 +38,27 @@ def generate_carte_amg_query(user, **kwargs):
             for membre in members:
                 if membre.relationship:
                     if str(membre.relationship.relation).lower() in ["spouse", "époux"]:
-                        conjointe = membre.last_name + " " + membre.other_names
+                        nom_conjointe = membre.last_name
+                        prenom_conjointe = membre.other_names
                         chfid2 = membre.chf_id
                         mother_ok = True
                     if mother_ok:
                         break
-        chef_menage = chef_menage[:19] #19 Caracteres max
-        conjointe = conjointe[:19] #19 Caracteres max
-        data["FullFathersName"] = chef_menage
-        data["FullMothersName"] = conjointe
+        # chef_menage = chef_menage[:19] #19 Caracteres max
+        # conjointe = conjointe[:19] #19 Caracteres max
+        data["FathersFirstName"] = nom_chef_menage
+        data["FathersLastName"] = prenom_chef_menage
+        data["MothersFirstName"] = nom_conjointe
+        data["MothersLastName"] = prenom_conjointe
         data["chfid"] = chfid
         data["chfid2"] = chfid2
         if insuree_obj.family:
             if insuree_obj.family.parent:
                 # We exchange the head and the spouse
-                data["FullFathersName"] = conjointe
-                data["FullMothersName"] = chef_menage
+                data["FathersFirstName"] = nom_conjointe
+                data["FathersLastName"] = prenom_conjointe
+                data["MothersFirstName"] = nom_chef_menage
+                data["MothersLastName"] = prenom_chef_menage
                 data["chfid"] = chfid2
                 data["chfid2"] = chfid
         insure_policies = InsureePolicy.objects.filter(
