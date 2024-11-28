@@ -95,3 +95,34 @@ def generate_carte_amg_query(user, **kwargs):
     }
     print(dictBase)
     return dictBase
+
+
+
+def invoice_private_fosa_query(user, **kwargs):
+    print("Rapport Par FOSA ", kwargs)
+    hflocation = kwargs.get("hflocation")
+    
+    insurees_data = []
+    # for insuree_obj in insuree_list:
+    #     data = {}
+    #     insurees_data.append(data)
+    dictBase =  {
+        "datasource": insurees_data
+    }
+    print(dictBase)
+    return dictBase
+
+
+def invoice_public_fosa_query(user, **kwargs):
+    print("Rapport Par FOSA publique", kwargs)
+    hflocation = kwargs.get("hflocation")
+    
+    insurees_data = []
+    # for insuree_obj in insuree_list:
+    #     data = {}
+    #     insurees_data.append(data)
+    dictBase =  {
+        "datasource": insurees_data
+    }
+    print(dictBase)
+    return dictBase
