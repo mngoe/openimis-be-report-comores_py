@@ -1,5 +1,7 @@
-from reportcomores.report_templates import rptBeneficiaryAmg
-from reportcomores.models import generate_carte_amg_query
+from reportcomores.report_templates import rptBeneficiaryAmg, rptInvoiceFosaPrivate,\
+    rptInvoiceFosaPublic
+from reportcomores.models import generate_carte_amg_query, invoice_private_fosa_query,\
+    invoice_public_fosa_query
 
 report_definitions = [
     {
@@ -9,6 +11,24 @@ report_definitions = [
         "description": "Carte AMG",
         "module": "reportcomores",
         "python_query": generate_carte_amg_query,
+        "permission": ["131215"],
+    },
+    {
+        "name": "invoice_private_fosa",
+        "engine": 0,
+        "default_report": rptInvoiceFosaPrivate.template,
+        "description": "Facture globale par FOSA Privée",
+        "module": "reportcomores",
+        "python_query": invoice_private_fosa_query,
+        "permission": ["131215"],
+    },
+    {
+        "name": "invoice_public_fosa",
+        "engine": 0,
+        "default_report": rptInvoiceFosaPublic.template,
+        "description": "Facture globale par FOSA Publique",
+        "module": "reportcomores",
+        "python_query": invoice_public_fosa_query,
         "permission": ["131215"],
     }
 ]
