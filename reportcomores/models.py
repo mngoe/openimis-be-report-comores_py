@@ -179,9 +179,10 @@ def invoice_private_fosa_query(user, **kwargs):
     final_data["moisReleve"] = my_dict.get(today_date.split("-")[1])
     # Get the district
     if hflocation and hflocation!="0" :
+        # P, C: Pricate and Charity Health facilities
         hflocationObj = HealthFacility.objects.filter(
             code=hflocation,
-            legal_form__code='P',
+            legal_form__code__in=['P', 'C'],
             validity_to__isnull=True
         ).first()
         if hflocationObj:
@@ -363,12 +364,12 @@ def invoice_public_fosa_query(user, **kwargs):
         "12": "Décembre"
     }
     final_data["moisReleve"] = my_dict.get(today_date.split("-")[1])
-    # Get the district
+    # P, C: Pricate and Charity Health facilities
     if hflocation and hflocation!="0" :
         hflocationObj = HealthFacility.objects.filter(
             code=hflocation,
             validity_to__isnull=True
-        ).exclude(legal_form__code='P').first()
+        ).exclude(legal_form__code__in=['P', 'C']).first()
         if hflocationObj:
             final_data["noReleve"] = hflocationObj.code + "/" + str(numero_facture)
             dictGeo['health_facility'] = hflocationObj.id
