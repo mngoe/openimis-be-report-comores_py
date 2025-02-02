@@ -328,7 +328,7 @@ def invoice_private_fosa_query(user, **kwargs):
         "11": "Novembre",
         "12": "Décembre"
     }
-    final_data["moisReleve"] = my_dict.get(today_date.split("-")[1])
+    final_data["moisReleve"] = my_dict.get(date_from.split("-")[1])
     # Get the district
     if hflocation and hflocation!="0" :
         # P, C: Pricate and Charity Health facilities
@@ -515,7 +515,7 @@ def invoice_public_fosa_query(user, **kwargs):
         "11": "Novembre",
         "12": "Décembre"
     }
-    final_data["moisReleve"] = my_dict.get(today_date.split("-")[1])
+    final_data["moisReleve"] = my_dict.get(date_from.split("-")[1])
     # P, C: Pricate and Charity Health facilities
     if hflocation and hflocation!="0" :
         hflocationObj = HealthFacility.objects.filter(
