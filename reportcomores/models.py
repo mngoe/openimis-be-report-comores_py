@@ -809,7 +809,7 @@ def report_membership_query(user, **kwargs):
             dictbase["immat"] = head.chf_id
             dictbase["firstName"] = head.last_name
             dictbase["lastName"] = head.other_names
-            dictbase["address"] = head.address
+            dictbase["address"] = family.address
             if head.gender:
                 if head.gender.code == 'M':
                     dictbase["civiliteM"] = "x"
