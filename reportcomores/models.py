@@ -673,14 +673,14 @@ def report_membership_query(user, **kwargs):
             dictbase["headDigit5"] = " "
             dictbase["headDigit6"] = " "
             dictbase["headDigit7"] = " "
-            dictbase["email"] = "..............................................................................................."
+            dictbase["email"] = " "
             
             head = family.head_insuree
             if head.email:
                 dictbase["email"] = head.email
             print("chec ", head.profession)
-            dictbase["familyType"] = "............................................"
-            dictbase["profession"] = "........................................"
+            dictbase["familyType"] = " "
+            dictbase["profession"] = " "
             if family.family_type:
                 dictbase["familyType"] = family.family_type.alt_language
             if head.profession:
@@ -690,14 +690,15 @@ def report_membership_query(user, **kwargs):
                     id=family.location.id,
                     validity_to__isnull=True
                 ).first()
+                print("hflocation_obj ", hflocation_obj)
                 if hflocation_obj:
                     level_village = False
                     level_district = False
                     level_ville = False
-                    municipality = "...................................................................................."
+                    municipality = " "
                     district = " "
-                    village = ".............................................."
-                    region = "...................................................................................."
+                    village = " "
+                    region = " "
                     if hflocation_obj.parent:
                         level_district = True
                         if hflocation_obj.parent.parent:
@@ -719,6 +720,13 @@ def report_membership_query(user, **kwargs):
                     else:
                         region = hflocation_obj.location.code
                     dictbase["locality"] = village
+                    if village != "":
+                        dictbase["locality"] += ", " + district
+                    else:
+                        dictbase["locality"] = district
+                    print("locality ", dictbase["locality"])
+                    print(dictbase["region"])
+                    print(dictbase["community"])
                     dictbase["region"] = region
                     dictbase["community"] = municipality
             if head.phone and len(head.phone) >= 7:
@@ -742,7 +750,9 @@ def report_membership_query(user, **kwargs):
                 family_id=family.id,
                 validity_to__isnull=True
             ).exclude(id=head.id)
+            print("members ", members)
             for membre in members:
+                print("relation ", membre.relationship)
                 if membre.relationship:
                     values = {}
                     if str(membre.relationship.relation).lower() in ["spouse", "époux"]:
@@ -794,6 +804,9 @@ def report_membership_query(user, **kwargs):
                 insuree=head.id, validity_to__isnull=True
             )
             dictbase["total"] = ""
+            dictbase["jour"] = "...."
+            dictbase["mois"] = "...."
+            dictbase["annee"] = "...."
             if insure_policy:
                 inspolicy  = insure_policy[0]
                 policy = Policy.objects.filter(id=inspolicy.policy.id).first()
@@ -802,10 +815,6 @@ def report_membership_query(user, **kwargs):
                     dictbase["jour"] = str(policy.start_date).split("-")[2]
                     dictbase["mois"] = str(policy.start_date).split("-")[1]
                     dictbase["annee"] = str(policy.start_date).split("-")[0]
-                else:
-                    dictbase["jour"] = "......."
-                    dictbase["mois"] = "......."
-                    dictbase["annee"] = "......."
             dictbase["immat"] = head.chf_id
             dictbase["firstName"] = head.last_name
             dictbase["lastName"] = head.other_names
