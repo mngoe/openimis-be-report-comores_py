@@ -756,8 +756,8 @@ def report_membership_query(user, **kwargs):
                 print("relation ", membre.relationship)
                 if membre.relationship:
                     values = {}
-                    values["numero"] = str(row)
                     if str(membre.relationship.relation).lower() in ["spouse", "époux"]:
+                        values["numero"] = str(row)
                         values["libelle"] = "Conjoint(e)"
                         values["chfid"] = membre.chf_id
                         values["FirstName"] = membre.last_name
@@ -784,6 +784,7 @@ def report_membership_query(user, **kwargs):
                                 dictbase["ConjointDigit7"] = membre.phone[6]
                         data.append(values)
                     elif str(membre.relationship.relation).lower() in ["fils/fille", "son/daughter"]:
+                        values["numero"] = str(row)
                         values["libelle"] = "Bénéficiaire"
                         values["chfid"] = membre.chf_id
                         values["FirstName"] = membre.last_name
@@ -794,6 +795,7 @@ def report_membership_query(user, **kwargs):
                         data.append(values)
                     else:
                         values2 = {}
+                        values2["numero"] = row
                         values2["libelle"] = "Bénéficiaire"
                         values2["chfid"] = membre.chf_id
                         values2["FirstName"] = membre.last_name
