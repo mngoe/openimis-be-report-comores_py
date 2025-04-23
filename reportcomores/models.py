@@ -708,17 +708,17 @@ def report_membership_query(user, **kwargs):
                     if level_village:
                         village = hflocation_obj.name
                         municipality = hflocation_obj.parent.name
-                        district = hflocation_obj.parent.parent.code
-                        region = hflocation_obj.parent.parent.parent.code
+                        district = hflocation_obj.parent.parent.name
+                        region = hflocation_obj.parent.parent.parent.name
                     elif level_ville:
                         municipality = hflocation_obj.name
-                        district = hflocation_obj.parent.code
-                        region = hflocation_obj.parent.parent.code
+                        district = hflocation_obj.parent.name
+                        region = hflocation_obj.parent.parent.name
                     elif level_district:
-                        district = hflocation_obj.code
-                        region = hflocation_obj.parent.code
+                        district = hflocation_obj.name
+                        region = hflocation_obj.parent.name
                     else:
-                        region = hflocation_obj.location.code
+                        region = hflocation_obj.location.name
                     dictbase["locality"] = village
                     if village != "":
                         dictbase["locality"] += ", " + district
