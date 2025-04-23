@@ -658,6 +658,7 @@ def report_membership_query(user, **kwargs):
     print("family_list ", family_list)
     if family_list:
         for family in family_list:
+            row = 1
             dictbase["headDigit1"] = " "
             dictbase["headDigit2"] = " "
             dictbase["headDigit3"] = " "
@@ -755,6 +756,7 @@ def report_membership_query(user, **kwargs):
                 print("relation ", membre.relationship)
                 if membre.relationship:
                     values = {}
+                    values["numero"] = str(row)
                     if str(membre.relationship.relation).lower() in ["spouse", "époux"]:
                         values["libelle"] = "Conjoint(e)"
                         values["chfid"] = membre.chf_id
@@ -800,6 +802,7 @@ def report_membership_query(user, **kwargs):
                         if membre.gender:
                             values2["sex"] = str(membre.gender.code)
                         data2.append(values2)
+                row += 1
             insure_policy = InsureePolicy.objects.filter(
                 insuree=head.id, validity_to__isnull=True
             )
