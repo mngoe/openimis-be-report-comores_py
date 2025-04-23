@@ -830,26 +830,26 @@ def report_membership_query(user, **kwargs):
     today_date = str(today).split(" ")[0]
     encoded_img = False
     if head.photo and head.photo.photo:
-        print("photo ", head.photo.photo)
         imageData = str(head.photo.photo)
         myimage = base64.b64decode((imageData))
         extension = imghdr.what(None, h=myimage)
         print("extension ", extension)
-        if str(extension).lower() != 'png':
-            # save image to png, image can have different format leading to an
-            # error : image is not PNG
-            imgFile = open('/tmp/'+head.chf_id+'.jpeg', 'wb')
-            imgFile.write(myimage)
-            imgFile.close()
+        if extension:
+            if str(extension).lower() != 'png':
+                # save image to png, image can have different format leading to an
+                # error : image is not PNG
+                imgFile = open('/tmp/'+head.chf_id+'.jpeg', 'wb')
+                imgFile.write(myimage)
+                imgFile.close()
 
-            img1 = Image.open(r'/tmp/'+head.chf_id+'.jpeg')
-            img1.save(r'/tmp/'+head.chf_id+'.png')
+                img1 = Image.open(r'/tmp/'+head.chf_id+'.jpeg')
+                img1.save(r'/tmp/'+head.chf_id+'.png')
 
-            with open('/tmp/'+head.chf_id+'.png', "rb") as image_file:
-                encoded_img = base64.b64encode(image_file.read()).decode('utf-8')
-        else:
-            # already the expected extension (PNG)
-            encoded_img = imageData
+                with open('/tmp/'+head.chf_id+'.png', "rb") as image_file:
+                    encoded_img = base64.b64encode(image_file.read()).decode('utf-8')
+            else:
+                # already the expected extension (PNG)
+                encoded_img = imageData
     else:
         filename = ""
         try:
