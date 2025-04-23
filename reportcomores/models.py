@@ -724,11 +724,11 @@ def report_membership_query(user, **kwargs):
                         dictbase["locality"] += ", " + district
                     else:
                         dictbase["locality"] = district
+                    dictbase["region"] = region
+                    dictbase["community"] = municipality
                     print("locality ", dictbase["locality"])
                     print(dictbase["region"])
                     print(dictbase["community"])
-                    dictbase["region"] = region
-                    dictbase["community"] = municipality
             if head.phone and len(head.phone) >= 7:
                 if family.parent:
                     dictbase["ConjointDigit1"] = head.phone[0]
