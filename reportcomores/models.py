@@ -795,7 +795,7 @@ def report_membership_query(user, **kwargs):
                         data.append(values)
                     else:
                         values2 = {}
-                        values2["numero"] = row
+                        values2["numero"] = str(row)
                         values2["libelle"] = "Bénéficiaire"
                         values2["chfid"] = membre.chf_id
                         values2["FirstName"] = membre.last_name
