@@ -830,6 +830,7 @@ def report_membership_query(user, **kwargs):
     today_date = str(today).split(" ")[0]
     encoded_img = False
     if head.photo and head.photo.photo:
+        print("photo ", head.photo.photo)
         imageData = str(head.photo.photo)
         myimage = base64.b64decode((imageData))
         extension = imghdr.what(None, h=myimage)
