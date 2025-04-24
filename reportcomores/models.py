@@ -891,5 +891,5 @@ def report_membership_query(user, **kwargs):
     dictbase['data2'] = data2
     if encoded_img:
         dictbase["PhotoInsuree"] = "data:image/png;base64,"+str(encoded_img),
-    # print(dictbase)
+    print(dictbase)
     return dictbase
