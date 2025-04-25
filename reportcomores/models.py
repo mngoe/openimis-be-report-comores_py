@@ -755,6 +755,9 @@ def report_membership_query(user, **kwargs):
             for membre in members:
                 print("relation ", membre.relationship)
                 if membre.relationship:
+                    jour = str(membre.dob).split("-")[2]
+                    mois = str(membre.dob).split("-")[1]
+                    annee = str(membre.dob).split("-")[0]
                     values = {}
                     if str(membre.relationship.relation).lower() in ["spouse", "époux"]:
                         values["numero"] = str(row)
@@ -762,7 +765,7 @@ def report_membership_query(user, **kwargs):
                         values["chfid"] = membre.chf_id
                         values["FirstName"] = membre.last_name
                         values["LastName"] = membre.other_names
-                        values["dob"] = str(membre.dob)
+                        values["dob"] = jour + "-" + mois + "-" + annee
                         if membre.gender:
                             values["sex"] = str(membre.gender.code)
                         if membre.phone and len(membre.phone) >= 7:
@@ -789,7 +792,7 @@ def report_membership_query(user, **kwargs):
                         values["chfid"] = membre.chf_id
                         values["FirstName"] = membre.last_name
                         values["LastName"] = membre.other_names
-                        values["dob"] = str(membre.dob)
+                        values["dob"] = jour + "-" + mois + "-" + annee
                         if membre.gender:
                             values["sex"] = str(membre.gender.code)
                         data.append(values)
@@ -800,7 +803,7 @@ def report_membership_query(user, **kwargs):
                         values2["chfid"] = membre.chf_id
                         values2["FirstName"] = membre.last_name
                         values2["LastName"] = membre.other_names
-                        values2["dob"] = str(membre.dob)
+                        values2["dob"] = jour + "-" + mois + "-" + annee
                         if membre.gender:
                             values2["sex"] = str(membre.gender.code)
                         data2.append(values2)
