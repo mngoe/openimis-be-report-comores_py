@@ -259,8 +259,10 @@ class PrintedReportsHistory(models.Model):
     id = models.AutoField(db_column='ID', primary_key=True)
     seq = models.CharField(db_column='Sequence', max_length=6)
     fosa = models.CharField(db_column='Fosa', max_length=248)
-    start_date = models.CharField(db_column='startDate', blank=True, null=True)
-    end_date = models.CharField(db_column='endDate', blank=True, null=True)
+    start_date = models.CharField(db_column='startDate', blank=True,
+                                  max_length=100, null=True)
+    end_date = models.CharField(db_column='endDate',
+                                max_length=100, blank=True, null=True)
 
     class Meta:
         db_table = "tblPrintedReportsHistory"
