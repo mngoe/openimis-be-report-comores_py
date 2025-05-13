@@ -446,7 +446,7 @@ def invoice_private_fosa_query(user, **kwargs):
                 data["amount"] = str("{:,.0f}".format(float(somme)))
                 i+=1
                 grand_total += somme
-    final_data["total"] = str("{:,.0f}".format(float(grand_total))) + " FC"
+    final_data["total"] = str("{:,.0f}".format(float(grand_total))) + " KMF"
     empty_data = []
     empty_data.append({"text2": "\n\n\n\n\n"})
     final_data["data2"] = empty_data
@@ -631,7 +631,7 @@ def invoice_public_fosa_query(user, **kwargs):
                 data["amount"] = str("{:,.0f}".format(float(somme)))
                 i+=1
                 grand_total += somme
-    final_data["total"] = str("{:,.0f}".format(float(grand_total))) + " FC"
+    final_data["total"] = str("{:,.0f}".format(float(grand_total))) + " KMF"
     empty_data = []
     empty_data.append({"text2": "\n\n\n\n\n"})
     final_data["data2"] = empty_data
@@ -821,7 +821,7 @@ def report_membership_query(user, **kwargs):
                 inspolicy  = insure_policy[0]
                 policy = Policy.objects.filter(id=inspolicy.policy.id).first()
                 if policy:
-                    dictbase["total"] = str("{:,.0f}".format(float(policy.value))) + " FC " + amount_to_text_fr(int(policy.value), 'FC')
+                    dictbase["total"] = str("{:,.0f}".format(float(policy.value))) + " KMF " + amount_to_text_fr(int(policy.value), 'KMF')
                     dictbase["jour"] = str(policy.start_date).split("-")[2]
                     dictbase["mois"] = str(policy.start_date).split("-")[1]
                     dictbase["annee"] = str(policy.start_date).split("-")[0]
