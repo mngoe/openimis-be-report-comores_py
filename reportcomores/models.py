@@ -12,6 +12,7 @@ import random
 from policy.models import Policy
 import imghdr, os
 from PIL import Image
+from contribution.models import Premium
 
 val_de_zero = [
     'million', 'milliard', 'billion',
@@ -813,10 +814,10 @@ def report_membership_query(user, **kwargs):
             insure_policy = InsureePolicy.objects.filter(
                 insuree=head.id if head else 0, validity_to__isnull=True
             )
-            dictbase["total"] = ""
-            dictbase["jour"] = "...."
-            dictbase["mois"] = "...."
-            dictbase["annee"] = "...."
+            dictbase["total"] = " "
+            dictbase["jour"] = " "
+            dictbase["mois"] = " "
+            dictbase["annee"] = " "
             if insure_policy:
                 inspolicy  = insure_policy[0]
                 policy = Policy.objects.filter(id=inspolicy.policy.id).first()
@@ -825,6 +826,39 @@ def report_membership_query(user, **kwargs):
                     dictbase["jour"] = str(policy.start_date).split("-")[2]
                     dictbase["mois"] = str(policy.start_date).split("-")[1]
                     dictbase["annee"] = str(policy.start_date).split("-")[0]
+                    contribution = policy.contribution_plan
+                    if contribution:
+                        if contribution.code in ["AMOE", "AMOG"]:
+                            dictbase["amo"] = "x"
+                        if contribution.code in ["AMOS", "AMOS1", "AMOS2", "AMOS3", "AMOS4"]:
+                            dictbase["amos"] = "x"
+                        if contribution.code in ["AMS"]:
+                            dictbase["ams"] = "x"
+                    if policy.payment_day:
+                        if str(policy.payment_day) == "5":
+                            dictbase["D5"] = "x"
+                        if str(policy.payment_day) == "10":
+                            dictbase["D10"] = "x"
+                        if str(policy.payment_day) == "15":
+                            dictbase["D15"] = "x"
+                        if str(policy.payment_day) == "20":
+                            dictbase["D20"] = "x"
+                    premium = Premium.objects.filter(validity_to__isnull=True, policy_id=policy.id).first()
+                    if premium.pay_type == "B":
+                        dictbase["Bank"] = "x"
+                    if premium.pay_type == "M":
+                        dictbase["Mobile"] = "x"
+                    if premium.pay_type not in ["M", "B"]:
+                        dictbase["Virement"] = "x"
+                    if policy.periodicity:
+                        if policy.periodicity == "M":
+                            dictbase["M"] = "x"
+                        if policy.periodicity == "Q":
+                            dictbase["T"] = "x"
+                        if policy.periodicity == "S":
+                            dictbase["S"] = "x"
+                        if policy.periodicity == "Y":
+                            dictbase["A"] = "x"
             dictbase["immat"] = " "
             dictbase["firstName"] = " "
             dictbase["lastName"] = " "
@@ -833,13 +867,13 @@ def report_membership_query(user, **kwargs):
                 dictbase["immat"] = head.chf_id
                 dictbase["firstName"] = head.last_name
                 dictbase["lastName"] = head.other_names
-                dictbase["address"] = family.address
+                dictbase["address"] = family.address if family.address is not None else " "
             if head and head.gender:
                 if head.gender.code == 'M':
                     dictbase["civiliteM"] = "x"
                     dictbase["civiliteF"] = ""
                 if head.gender.code == 'F':
-                    dictbase["civiliteM"] = "x"
+                    dictbase["civiliteF"] = "x"
                     dictbase["civiliteM"] = ""
             if head:
                 if head.photo and head.photo.photo:
@@ -850,7 +884,7 @@ def report_membership_query(user, **kwargs):
                     if extension:
                         if str(extension).lower() != 'png':
                             # save image to png, image can have different format leading to an
-                            # error : image is not PNG
+                            # error :  image is not PNG
                             imgFile = open('/tmp/'+head.chf_id+'.jpeg', 'wb')
                             imgFile.write(myimage)
                             imgFile.close()
