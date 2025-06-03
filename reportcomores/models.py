@@ -844,12 +844,13 @@ def report_membership_query(user, **kwargs):
                         if str(policy.payment_day) == "20":
                             dictbase["D20"] = "x"
                     premium = Premium.objects.filter(validity_to__isnull=True, policy_id=policy.id).first()
-                    if premium.pay_type == "B":
-                        dictbase["Bank"] = "x"
-                    if premium.pay_type == "M":
-                        dictbase["Mobile"] = "x"
-                    if premium.pay_type not in ["M", "B"]:
-                        dictbase["Virement"] = "x"
+                    if premium:
+                        if premium.pay_type == "B":
+                            dictbase["Bank"] = "x"
+                        if premium.pay_type == "M":
+                            dictbase["Mobile"] = "x"
+                        if premium.pay_type not in ["M", "B"]:
+                            dictbase["Virement"] = "x"
                     if policy.periodicity:
                         if policy.periodicity == "M":
                             dictbase["M"] = "x"
