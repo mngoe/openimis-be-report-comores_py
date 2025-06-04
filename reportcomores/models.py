@@ -686,7 +686,8 @@ def report_membership_query(user, **kwargs):
             dictbase["familyType"] = " "
             dictbase["profession"] = " "
             if family.family_type:
-                dictbase["familyType"] = family.family_type.alt_language
+                dictbase["familyType"] = str(
+                    family.family_type.alt_language).replace("Ménage", "Monogame")
             if head and head.profession:
                 dictbase["profession"] = head.profession.alt_language
             if family.location:
@@ -828,9 +829,9 @@ def report_membership_query(user, **kwargs):
                     dictbase["annee"] = str(policy.start_date).split("-")[0]
                     contribution = policy.contribution_plan
                     if contribution:
-                        if contribution.code in ["AMOE", "AMOG"]:
+                        if contribution.code in ["AMOE", "AMOG", "AMOS"]:
                             dictbase["amo"] = "x"
-                        if contribution.code in ["AMOS", "AMOS1", "AMOS2", "AMOS3", "AMOS4"]:
+                        if contribution.code in ["AMOS1", "AMOS2", "AMOS3", "AMOS4"]:
                             dictbase["amos"] = "x"
                         if contribution.code in ["AMS"]:
                             dictbase["ams"] = "x"
