@@ -694,11 +694,20 @@ def report_membership_query(user, **kwargs):
                 "4": "reportcomores.marital.widowed",
                 "5": "reportcomores.marital.single"
             }
+            old_maritals = {
+                "M": "reportcomores.marital.maried",
+                "P": "reportcomores.marital.polygamous",
+                "D": "reportcomores.marital.divorced",
+                "W": "reportcomores.marital.widowed",
+                "S": "reportcomores.marital.single"
+            }
             if head and head.marital:
                 # Get translation in a specific language
                 translated_text = False
                 with override('fr_KM'):
                     value = maritals.get(str(head.marital), False)
+                    if not value:
+                        value = old_maritals.get(str(head.marital), False)
                     if value:
                         translated_text = _(value)
                         if translated_text:
