@@ -13,6 +13,8 @@ from policy.models import Policy
 import imghdr, os
 from PIL import Image
 from contribution.models import Premium
+from django.utils.translation import gettext as _
+from django.utils.translation import override
 
 val_de_zero = [
     'million', 'milliard', 'billion',
@@ -685,9 +687,20 @@ def report_membership_query(user, **kwargs):
             print("chec ", head.profession)
             dictbase["familyType"] = " "
             dictbase["profession"] = " "
-            if family.family_type:
-                dictbase["familyType"] = str(
-                    family.family_type.alt_language).replace("Ménage", "Monogame")
+            maritals = {
+                "1": "reportcomores.marital.maried",
+                "2": "reportcomores.marital.polygamous",
+                "3": "reportcomores.marital.divorced",
+                "4": "reportcomores.marital.widowed",
+                "5": "reportcomores.marital.single"
+            }
+            if head and head.marital:
+                # Get translation in a specific language
+                translated_text = False
+                with override('fr_KM'):
+                    translated_text = _(maritals.get(str(head.marital), False))
+                    if translated_text:
+                        dictbase["familyType"] = str(translated_text)
             if head and head.profession:
                 dictbase["profession"] = head.profession.alt_language
             if family.location:
@@ -814,7 +827,7 @@ def report_membership_query(user, **kwargs):
                 row += 1
             insure_policy = InsureePolicy.objects.filter(
                 insuree=head.id if head else 0, validity_to__isnull=True
-            )
+            ).order_by("-id")
             dictbase["total"] = " "
             dictbase["jour"] = " "
             dictbase["mois"] = " "
