@@ -698,9 +698,11 @@ def report_membership_query(user, **kwargs):
                 # Get translation in a specific language
                 translated_text = False
                 with override('fr_KM'):
-                    translated_text = _(maritals.get(str(head.marital), False))
-                    if translated_text:
-                        dictbase["familyType"] = str(translated_text)
+                    value = maritals.get(str(head.marital), False)
+                    if value:
+                        translated_text = _(value)
+                        if translated_text:
+                            dictbase["familyType"] = str(translated_text)
             if head and head.profession:
                 dictbase["profession"] = head.profession.alt_language
             if family.location:
