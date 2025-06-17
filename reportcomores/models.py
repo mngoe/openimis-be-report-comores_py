@@ -185,32 +185,52 @@ def generate_carte_amg_query(user, **kwargs):
         chef_menage = insuree_obj.last_name + " " + insuree_obj.other_names
         chfid = insuree_obj.chf_id
         if insuree_obj.family:
-            members = Insuree.objects.filter(
-                family_id=insuree_obj.family.id,
-                validity_to__isnull=True
-            ).exclude(id=insuree_obj.id)
-            mother_ok = False
-            for membre in members:
-                if membre.relationship:
-                    if str(membre.relationship.relation).lower() in ["spouse", "époux"]:
+            family = insuree_obj.family
+            if family.parent:
+                # Cas famille polygamique
+                try:
+                    chef_principal = Insuree.objects.get(
+                        family=family.parent,
+                        head=True,
+                        validity_to__isnull=True
+                    )
+                    data["FullMothersName"] = (chef_principal.last_name + " " + chef_principal.other_names)[:19]
+                    data["chfid2"] = chef_principal.chf_id
+
+                    # Le chef de la sous-famille est l’assuré courant
+                    data["FullFathersName"] = chef_menage[:19]
+                    data["chfid"] = chfid
+                except Insuree.DoesNotExist:
+                    # Chef principal introuvable, fallback sur assuré
+                    data["FullFathersName"] = chef_menage[:19]
+                    data["chfid"] = chfid
+                    data["FullMothersName"] = ""
+                    data["chfid2"] = ""
+            else:
+                # Cas famille simple
+                members = Insuree.objects.filter(
+                    family=family,
+                    validity_to__isnull=True
+                ).exclude(id=insuree_obj.id)
+
+                # Chercher conjoint(e)
+                for membre in members:
+                    if membre.relationship and str(membre.relationship.relation).lower() in ["spouse", "époux"]:
                         conjointe = membre.last_name + " " + membre.other_names
-                        chfid2 = membre.chf_id
-                        mother_ok = True
-                    if mother_ok:
+                        chfid2 = membre.chf_id 
                         break
-        chef_menage = chef_menage[:19] #19 Caracteres max
-        conjointe = conjointe[:19] #19 Caracteres max
-        data["FullFathersName"] = chef_menage
-        data["FullMothersName"] = conjointe
-        data["chfid"] = chfid
-        data["chfid2"] = chfid2
-        if insuree_obj.family:
-            if insuree_obj.family.parent:
-                # We exchange the head and the spouse
-                data["FullFathersName"] = conjointe
-                data["FullMothersName"] = chef_menage
-                data["chfid"] = chfid2
-                data["chfid2"] = chfid
+
+                data["FullFathersName"] = chef_menage[:19]
+                data["chfid"] = chfid
+                data["FullMothersName"] = conjointe[:19]
+                data["chfid2"] = chfid2
+        else:
+            # Pas de famille associée : fallback
+            data["FullFathersName"] = chef_menage[:19]
+            data["chfid"] = chfid
+            data["FullMothersName"] = ""
+            data["chfid2"] = ""
+                       
         insure_policies = InsureePolicy.objects.filter(
             insuree=insuree_obj.id, policy__status=2).order_by('-id')
         data["DateExpiration"] = ""
