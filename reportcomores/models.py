@@ -189,17 +189,28 @@ def generate_carte_amg_query(user, **kwargs):
             if family.parent:
                 # Cas famille polygamique
                 try:
-                    chef_principal = Insuree.objects.get(
-                        family=family.parent,
-                        head=True,
-                        validity_to__isnull=True
-                    )
-                    data["FullMothersName"] = (chef_principal.last_name + " " + chef_principal.other_names)[:19]
-                    data["chfid2"] = chef_principal.chf_id
+                    chef_principal = family.parent.head_insuree
 
-                    # Le chef de la sous-famille est l’assuré courant
-                    data["FullFathersName"] = chef_menage[:19]
-                    data["chfid"] = chfid
+                    # Vérifier s'il est assuré dans ce sous-ménage
+                    is_chef_in_subfamily = Insuree.objects.filter(
+                        family=family,
+                        id=chef_principal.id,
+                        validity_to__isnull=True
+                    ).exists()
+
+                    if is_chef_in_subfamily:
+                        # Cas 3 : Le mari est aussi assuré du sous-ménage
+                        data["FullFathersName"] = (chef_principal.last_name + " " + chef_principal.other_names)[:19]
+                        data["chfid"] = chef_principal.chf_id
+                        data["FullMothersName"] = chef_menage[:19]
+                        data["chfid2"] = chfid
+                    else:
+                        # Cas 2 : Le mari n’est pas assuré ici, la femme est chef
+                        data["FullFathersName"] = (insuree_obj.last_name + " " + insuree_obj.other_names)[:19]
+                        data["chfid"] = insuree_obj.chf_id
+                        data["FullMothersName"] = ""
+                        data["chfid2"] = ""
+
                 except Insuree.DoesNotExist:
                     # Chef principal introuvable, fallback sur assuré
                     data["FullFathersName"] = chef_menage[:19]
