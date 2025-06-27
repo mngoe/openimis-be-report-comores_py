@@ -247,6 +247,20 @@ def generate_carte_amg_query(user, **kwargs):
         data["DateExpiration"] = ""
         data["dateEmission"] = ""
         if insure_policies:
+            my_dict = {
+                "01": "Janvier",
+                "02": "Février",
+                "03": "Mars",
+                "04": "Avril",
+                "05": "Mai",
+                "06": "Juin",
+                "07": "Juillet",
+                "08": "Août",
+                "09": "Septembre",
+                "10": "Octobre",
+                "11": "Novembre",
+                "12": "Décembre"
+            }
             insure_policy = insure_policies[0]
             if insure_policy.policy.creation_date:
                 policy_date = datetime.datetime.strptime(str(insure_policy.policy.creation_date), "%Y-%m-%d")
@@ -255,7 +269,11 @@ def generate_carte_amg_query(user, **kwargs):
                 expiry_date = insure_policy.policy.creation_date + core.datetimedelta(years=5)
                 new_expiry_date = datetime.datetime.strptime(str(expiry_date), "%Y-%m-%d")
                 expiry_date_str = new_expiry_date.strftime("%d/%m/%Y")
-                data["DateExpiration"] = str(expiry_date_str)
+                jour = str(expiry_date_str).split("/")[0]
+                mois = str(expiry_date_str).split("/")[1]
+                annee = str(expiry_date_str).split("/")[2]
+                mois = my_dict.get(mois)
+                data["DateExpiration"] = jour + " " + mois + " " + annee
         # Create qr code instance
         qr = qrcode.QRCode()
         # The data that you want to store
