@@ -269,11 +269,11 @@ def generate_carte_amg_query(user, **kwargs):
                 expiry_date = insure_policy.policy.creation_date + core.datetimedelta(years=5)
                 new_expiry_date = datetime.datetime.strptime(str(expiry_date), "%Y-%m-%d")
                 expiry_date_str = new_expiry_date.strftime("%d/%m/%Y")
-                jour = str(expiry_date_str).split("/")[0]
-                mois = str(expiry_date_str).split("/")[1]
-                annee = str(expiry_date_str).split("/")[2]
-                mois = my_dict.get(mois)
-                data["DateExpiration"] = jour + " " + mois + " " + annee
+                # jour = str(expiry_date_str).split("/")[0]
+                # mois = str(expiry_date_str).split("/")[1]
+                # annee = str(expiry_date_str).split("/")[2]
+                # mois = my_dict.get(mois)
+                data["DateExpiration"] = str(expiry_date_str)
         # Create qr code instance
         qr = qrcode.QRCode()
         # The data that you want to store
@@ -284,7 +284,7 @@ def generate_carte_amg_query(user, **kwargs):
         qr.make()
 
         # Create an image from the QR Code instance
-        img = qr.make_image()
+        img = qr.make_image(fill_color="white", back_color="transparent")
 
         # Create a BytesIO object
         buffered = BytesIO()
