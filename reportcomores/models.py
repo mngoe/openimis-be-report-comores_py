@@ -15,6 +15,13 @@ from PIL import Image
 from contribution.models import Premium
 from django.utils.translation import gettext as _
 from django.utils.translation import override
+from django.db import transaction
+from invoice.models import Invoice, InvoiceLineItem
+from django.contrib.contenttypes.models import ContentType
+from policyholder.models import PolicyHolder
+import logging
+
+logger = logging.getLogger(__name__)
 
 val_de_zero = [
     'million', 'milliard', 'billion',
@@ -1010,3 +1017,82 @@ def report_membership_query(user, **kwargs):
                 dictbase["PhotoInsuree"] = "data:image/png;base64,"+str(encoded_img)
     print(dictbase)
     return dictbase
+
+def invoice_afd_query(user, **kwargs):
+    print("Rapport Facture AFD ", kwargs)
+    date_from = kwargs.get("date_from")
+    date_to = kwargs.get("date_to")
+    mode = kwargs.get("mode", "preview")
+    format = "%Y-%m"
+
+    date_from_object = datetime.datetime.strptime(date_from, format)
+    date_from_str = date_from_object.strftime("%Y/%m")
+    date_to_object = datetime.datetime.strptime(date_to, format)
+    days_in_month = calendar.monthrange(date_to_object.year, date_to_object.month)[1]
+    date_to_str = date_to_object.strftime("%Y/%m")
+    policy_holder = PolicyHolder.objects.filter(code="AFD", is_deleted=False).first()
+
+    # Récupérer la facture globale AFD pour la période
+    period = date_from_object.strftime("%Y%m")
+    subject_id = policy_holder.id
+    subject_type = ContentType.objects.get_for_model(PolicyHolder)
+
+    invoice = Invoice.objects.filter(
+        status=Invoice.Status.DRAFT,
+        subject_id=subject_id,
+        subject_type=subject_type,
+        is_deleted=False
+    ).first()
+    
+    code = invoice.code if invoice else f"AFD_{period}"
+    
+    invoice_data = []
+    grand_total = 0
+    final_data = {}
+    today = datetime.datetime.now()
+    today_date = str(today).split(" ")[0]
+    final_data["jour"] = today_date.split("-")[2]
+    final_data["mois"] = today_date.split("-")[1]
+    final_data["annee"] = today_date.split("-")[0]
+    final_data["noReleve"] = code
+
+    if invoice:
+        # Récupérer les lignes de facturation
+        line_items = InvoiceLineItem.objects.filter(
+            invoice=invoice,
+            is_deleted=False
+        ).order_by("id")
+
+        i = 1
+        for line in line_items:
+            data = {
+                "row_number": str(i),
+                "code": line.code,
+                "description": line.description,
+                "quantity": str(line.quantity),
+                "unit_price": str("{:,.0f}".format(float(line.unit_price))) + " KMF",
+                "amount_net": str("{:,.0f}".format(float(line.amount_net))) + " KMF",
+                "amount_total": str("{:,.0f}".format(float(line.amount_total))) + " KMF"
+            }
+            invoice_data.append(data)
+            grand_total += float(line.amount_total)
+            i += 1
+
+        if mode == "definitive":
+            # Clôturer la facture
+            invoice.status = Invoice.Status.VALIDATED
+            invoice.save()
+
+            #Créer une nouvelle facture vide pour la période suivante
+            #  Implementer dans le service de policy
+
+        final_data["total"] = str("{:,.0f}".format(grand_total)) + " KMF"
+        final_data["total_text"] = amount_to_text_fr(int(grand_total), "KMF")
+    else:
+        final_data["total"] = "0 KMF"
+        final_data["total_text"] = amount_to_text_fr(0, "KMF")
+
+    final_data["data"] = invoice_data
+    final_data["data2"] = [{"text2": "\n\n\n\n\n"}]
+    print(final_data)
+    return final_data

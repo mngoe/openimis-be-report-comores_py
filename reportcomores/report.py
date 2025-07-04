@@ -1,7 +1,7 @@
 from reportcomores.report_templates import rptBeneficiaryAmg, rptInvoiceFosaPrivate,\
-    rptInvoiceFosaPublic, rptMembership
+    rptInvoiceFosaPublic, rptMembership, rptInvoiceAfd
 from reportcomores.models import generate_carte_amg_query, invoice_private_fosa_query,\
-    invoice_public_fosa_query, report_membership_query
+    invoice_public_fosa_query, report_membership_query, invoice_afd_query
 
 report_definitions = [
     {
@@ -38,6 +38,15 @@ report_definitions = [
         "description": "Rapport d'adhésion pour familles polygames",
         "module": "reportcomores",
         "python_query": report_membership_query,
+        "permission": ["131215"],
+    },
+    {
+        "name": "invoice_afd_report",
+        "engine": 0,
+        "default_report": rptInvoiceAfd.template,
+        "description": "Facture globale AFD",
+        "module": "reportcomores",
+        "python_query": invoice_afd_query,
         "permission": ["131215"],
     }
 ]
