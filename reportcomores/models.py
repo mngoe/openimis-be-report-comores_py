@@ -200,20 +200,20 @@ def generate_carte_amg_query(user, **kwargs):
 
                     if is_chef_in_subfamily:
                         # Cas 3 : Le mari est aussi assuré du sous-ménage
-                        data["FullFathersName"] = (chef_principal.last_name + " " + chef_principal.other_names)[:19]
+                        data["FullFathersName"] = (chef_principal.last_name + " " + chef_principal.other_names)
                         data["chfid"] = chef_principal.chf_id
-                        data["FullMothersName"] = chef_menage[:19]
+                        data["FullMothersName"] = chef_menage
                         data["chfid2"] = chfid
                     else:
                         # Cas 2 : Le mari n’est pas assuré ici, la femme est chef
-                        data["FullFathersName"] = (insuree_obj.last_name + " " + insuree_obj.other_names)[:19]
+                        data["FullFathersName"] = (insuree_obj.last_name + " " + insuree_obj.other_names)
                         data["chfid"] = insuree_obj.chf_id
                         data["FullMothersName"] = ""
                         data["chfid2"] = ""
 
                 except Insuree.DoesNotExist:
                     # Chef principal introuvable, fallback sur assuré
-                    data["FullFathersName"] = chef_menage[:19]
+                    data["FullFathersName"] = chef_menage
                     data["chfid"] = chfid
                     data["FullMothersName"] = ""
                     data["chfid2"] = ""
@@ -231,13 +231,13 @@ def generate_carte_amg_query(user, **kwargs):
                         chfid2 = membre.chf_id 
                         break
 
-                data["FullFathersName"] = chef_menage[:19]
+                data["FullFathersName"] = chef_menage
                 data["chfid"] = chfid
-                data["FullMothersName"] = conjointe[:19]
+                data["FullMothersName"] = conjointe
                 data["chfid2"] = chfid2
         else:
             # Pas de famille associée : fallback
-            data["FullFathersName"] = chef_menage[:19]
+            data["FullFathersName"] = chef_menage
             data["chfid"] = chfid
             data["FullMothersName"] = ""
             data["chfid2"] = ""
