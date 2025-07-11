@@ -245,7 +245,7 @@ def generate_carte_amg_query(user, **kwargs):
         insure_policies = InsureePolicy.objects.filter(
             insuree=insuree_obj.id, policy__status=2).order_by('-id')
         data["DateExpiration"] = ""
-        data["dateEmission"] = ""
+        data["dateEmission"] = datetime.datetime.now().strftime("%d/%m/%Y")
         if insure_policies:
             my_dict = {
                 "01": "Janvier",
@@ -265,7 +265,7 @@ def generate_carte_amg_query(user, **kwargs):
             if insure_policy.policy.creation_date:
                 policy_date = datetime.datetime.strptime(str(insure_policy.policy.creation_date), "%Y-%m-%d")
                 policy_date_str = policy_date.strftime("%d/%m/%Y")
-                data["dateEmission"] = str(policy_date_str)
+                # data["dateEmission"] = str(policy_date_str)
                 expiry_date = insure_policy.policy.creation_date + core.datetimedelta(years=5)
                 new_expiry_date = datetime.datetime.strptime(str(expiry_date), "%Y-%m-%d")
                 expiry_date_str = new_expiry_date.strftime("%d/%m/%Y")
