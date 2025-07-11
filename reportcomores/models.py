@@ -182,7 +182,7 @@ def generate_carte_amg_query(user, **kwargs):
         conjointe = ""
         chef_menage = ""
         chfid2 = ""
-        chef_menage = insuree_obj.last_name + " " + insuree_obj.other_names
+        chef_menage = (insuree_obj.last_name + " " + insuree_obj.other_names).rstrip()
         chfid = insuree_obj.chf_id
         if insuree_obj.family:
             family = insuree_obj.family
@@ -227,7 +227,7 @@ def generate_carte_amg_query(user, **kwargs):
                 # Chercher conjoint(e)
                 for membre in members:
                     if membre.relationship and str(membre.relationship.relation).lower() in ["spouse", "époux"]:
-                        conjointe = membre.last_name + " " + membre.other_names
+                        conjointe = ( membre.last_name + " " + membre.other_names).rstrip()
                         chfid2 = membre.chf_id 
                         break
 
