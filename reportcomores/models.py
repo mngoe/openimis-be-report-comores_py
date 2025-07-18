@@ -182,7 +182,7 @@ def generate_carte_amg_query(user, **kwargs):
         conjointe = ""
         chef_menage = ""
         chfid2 = ""
-        chef_menage = insuree_obj.last_name + " " + insuree_obj.other_names
+        chef_menage = (insuree_obj.last_name + " " + insuree_obj.other_names).rstrip()
         chfid = insuree_obj.chf_id
         if insuree_obj.family:
             family = insuree_obj.family
@@ -200,20 +200,20 @@ def generate_carte_amg_query(user, **kwargs):
 
                     if is_chef_in_subfamily:
                         # Cas 3 : Le mari est aussi assuré du sous-ménage
-                        data["FullFathersName"] = (chef_principal.last_name + " " + chef_principal.other_names)[:19]
+                        data["FullFathersName"] = (chef_principal.last_name + " " + chef_principal.other_names)
                         data["chfid"] = chef_principal.chf_id
-                        data["FullMothersName"] = chef_menage[:19]
+                        data["FullMothersName"] = chef_menage
                         data["chfid2"] = chfid
                     else:
                         # Cas 2 : Le mari n’est pas assuré ici, la femme est chef
-                        data["FullFathersName"] = (insuree_obj.last_name + " " + insuree_obj.other_names)[:19]
+                        data["FullFathersName"] = (insuree_obj.last_name + " " + insuree_obj.other_names)
                         data["chfid"] = insuree_obj.chf_id
                         data["FullMothersName"] = ""
                         data["chfid2"] = ""
 
                 except Insuree.DoesNotExist:
                     # Chef principal introuvable, fallback sur assuré
-                    data["FullFathersName"] = chef_menage[:19]
+                    data["FullFathersName"] = chef_menage
                     data["chfid"] = chfid
                     data["FullMothersName"] = ""
                     data["chfid2"] = ""
@@ -227,17 +227,17 @@ def generate_carte_amg_query(user, **kwargs):
                 # Chercher conjoint(e)
                 for membre in members:
                     if membre.relationship and str(membre.relationship.relation).lower() in ["spouse", "époux"]:
-                        conjointe = membre.last_name + " " + membre.other_names
+                        conjointe = ( membre.last_name + " " + membre.other_names).rstrip()
                         chfid2 = membre.chf_id 
                         break
 
-                data["FullFathersName"] = chef_menage[:19]
+                data["FullFathersName"] = chef_menage
                 data["chfid"] = chfid
-                data["FullMothersName"] = conjointe[:19]
+                data["FullMothersName"] = conjointe
                 data["chfid2"] = chfid2
         else:
             # Pas de famille associée : fallback
-            data["FullFathersName"] = chef_menage[:19]
+            data["FullFathersName"] = chef_menage
             data["chfid"] = chfid
             data["FullMothersName"] = ""
             data["chfid2"] = ""
@@ -245,7 +245,7 @@ def generate_carte_amg_query(user, **kwargs):
         insure_policies = InsureePolicy.objects.filter(
             insuree=insuree_obj.id, policy__status=2).order_by('-id')
         data["DateExpiration"] = ""
-        data["dateEmission"] = ""
+        data["dateEmission"] = datetime.datetime.now().strftime("%d/%m/%Y")
         if insure_policies:
             my_dict = {
                 "01": "Janvier",
@@ -265,7 +265,7 @@ def generate_carte_amg_query(user, **kwargs):
             if insure_policy.policy.creation_date:
                 policy_date = datetime.datetime.strptime(str(insure_policy.policy.creation_date), "%Y-%m-%d")
                 policy_date_str = policy_date.strftime("%d/%m/%Y")
-                data["dateEmission"] = str(policy_date_str)
+                # data["dateEmission"] = str(policy_date_str)
                 expiry_date = insure_policy.policy.creation_date + core.datetimedelta(years=5)
                 new_expiry_date = datetime.datetime.strptime(str(expiry_date), "%Y-%m-%d")
                 expiry_date_str = new_expiry_date.strftime("%d/%m/%Y")
