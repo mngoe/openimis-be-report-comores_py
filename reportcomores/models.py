@@ -503,8 +503,8 @@ def report_prescriber_query(user, **kwargs):
             monthly_data[month_key]["total_amount"] += claim_amount
         
         # Compilation des données finales
-        final_data["total_prestations"] = total_prestations
-        final_data["total_claims"] = claims.count()
+        final_data["total_prestations"] = str(total_prestations)
+        final_data["total_claims"] = str(claims.count())
         
         # Données par type d'acte
         prestations_data = []
@@ -514,7 +514,7 @@ def report_prescriber_query(user, **kwargs):
             prestations_data.append({
                 "type_acte": data["type"],
                 "categorie": data["category"],
-                "nombre_prestations": data["count"],
+                "nombre_prestations": str(data["count"]),
                 "montant_total": f"{data['total_amount']:,.0f} KMF"
             })
         
@@ -523,7 +523,7 @@ def report_prescriber_query(user, **kwargs):
             prestations_data.append({
                 "type_acte": data["type"],
                 "categorie": data["category"],
-                "nombre_prestations": data["count"],
+                "nombre_prestations": str(data["count"]),
                 "montant_total": f"{data['total_amount']:,.0f} KMF"
             })
         
@@ -544,9 +544,9 @@ def report_prescriber_query(user, **kwargs):
             
             periods_data.append({
                 "periode": month_name,
-                "nombre_fpce": data["claims_count"],
-                "nombre_services": data["services_count"],
-                "nombre_produits": data["items_count"],
+                "nombre_fpce": str(data["claims_count"]),
+                "nombre_services": str(data["services_count"]),
+                "nombre_produits": str(data["items_count"]),
                 "montant_total": f"{data['total_amount']:,.0f} KMF"
             })
         
@@ -564,7 +564,11 @@ def report_prescriber_query(user, **kwargs):
         
         print("\n\n\n\n\n")
         print(final_data)
-        return final_data
+        import json
+        final_data_serializable = json.loads(json.dumps(final_data, default=str))
+        print("\n\n\n\n\n")
+        print(final_data_serializable)
+        return final_data_serializable
         
     except Exception as e:
         print(f"Erreur lors de la génération du rapport prescripteur: {e}")
