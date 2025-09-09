@@ -319,6 +319,262 @@ class PrintedReportsHistory(models.Model):
     class Meta:
         db_table = "tblPrintedReportsHistory"
 
+def report_prescriber_query(user, **kwargs):
+    """
+    Génère un rapport listant les prestations par prescripteur avec :
+    - Nombre de prestations par prescripteur
+    - Répartition par type d'acte (services et produits médicaux)
+    - Répartition par période et par FOSA
+    """
+    print("Rapport Par Prescripteur", kwargs)
+    
+    # Récupération des paramètres
+    prescriber_uuid = kwargs.get("prescriber_uuid")
+    requested_hf_id = kwargs.get("requested_hf_id") 
+    date_start = kwargs.get("date_start")
+    date_end = kwargs.get("date_end")
+    
+    if not all([prescriber_uuid, requested_hf_id, date_start, date_end]):
+        print("Paramètres manquants pour le rapport prescripteur")
+        return {}
+    
+    # Conversion des dates
+    date_from_object = datetime.datetime.strptime(date_start, "%Y-%m-%d")
+    date_to_object = datetime.datetime.strptime(date_end, "%Y-%m-%d")
+    
+    # Récupération des informations de base
+    try:
+        from claim.models import ClaimAdmin, Claim, ClaimService, ClaimItem,Prescriber
+        from medical.models import Service, Item
+        from location.models import HealthFacility
+        
+        # Récupération du prescripteur
+        prescriber = Prescriber.objects.filter(
+            uuid=prescriber_uuid,
+            validity_to__isnull=True
+        ).first()
+        
+        if not prescriber:
+            print("Prescripteur non trouvé")
+            return {}
+        
+        # Récupération de la FOSA
+        health_facility = HealthFacility.objects.filter(
+            id=requested_hf_id,
+            validity_to__isnull=True
+        ).first()
+        
+        if not health_facility:
+            print("Établissement de santé non trouvé")
+            return {}
+        
+        # Requête principale pour récupérer les claims du prescripteur
+        claims = Claim.objects.filter(
+            prescriber=prescriber,
+            health_facility=health_facility,
+            date_from__gte=date_start,
+            date_to__lte=date_end,
+            validity_to__isnull=True,
+            status__in=[4, 8, 16]  # Claims validés/approuvés
+        )
+        
+        # Données de base du rapport
+        today = datetime.datetime.now()
+        final_data = {
+            "prescriber_name": f"{prescriber.last_name} {prescriber.other_names}".strip(),
+            "prescriber_code": prescriber.code,
+            "main_health_facility_name": health_facility.name,
+            "main_health_facility_code": health_facility.code,
+            "date_start": date_start,
+            "date_end": date_end,
+            "generation_date": today.strftime("%d/%m/%Y"),
+            "generated_by": user.username if hasattr(user, 'username') else 'Système'
+        }
+        
+        # Récupération des informations géographiques de la FOSA
+        if health_facility.location:
+            location = health_facility.location
+            final_data["region"] = ""
+            final_data["district"] = ""
+            
+            # Navigation dans la hiérarchie géographique
+            current_location = location
+            while current_location:
+                if current_location.type == 'R':  # Région
+                    final_data["region"] = current_location.name
+                elif current_location.type == 'D':  # District
+                    final_data["district"] = current_location.name
+                current_location = current_location.parent
+        
+        # Initialisation des compteurs
+        total_prestations = 0
+        services_data = {}
+        items_data = {}
+        monthly_data = {}
+        
+        # Traitement des claims
+        for claim in claims:
+            # Traitement des services
+            claim_services = ClaimService.objects.filter(
+                claim=claim,
+                status=1,  # Service accepté
+                validity_to__isnull=True
+            )
+            
+            for claim_service in claim_services:
+                service = claim_service.service
+                if service:
+                    # Type de service
+                    service_type = service.type if service.type else "Non spécifié"
+                    service_category = service.category if service.category else "Non spécifié"
+                    
+                    key = f"{service_type} - {service_category}"
+                    if key not in services_data:
+                        services_data[key] = {
+                            "type": "Service",
+                            "category": key,
+                            "count": 0,
+                            "total_amount": 0
+                        }
+                    
+                    services_data[key]["count"] += claim_service.qty_provided or 1
+                    
+                    # Calcul du montant (priorité : valuated > approved > adjusted > asked)
+                    amount = (claim_service.price_valuated or 
+                             claim_service.price_approved or 
+                             claim_service.price_adjusted or 
+                             claim_service.price_asked or 0)
+                    services_data[key]["total_amount"] += amount
+                    total_prestations += claim_service.qty_provided or 1
+            
+            # Traitement des articles/produits médicaux
+            claim_items = ClaimItem.objects.filter(
+                claim=claim,
+                status=1,  # Article accepté
+                validity_to__isnull=True
+            )
+            
+            for claim_item in claim_items:
+                item = claim_item.item
+                if item:
+                    # Catégorie de produit
+                    item_type = item.type if item.type else "Non spécifié"
+                    
+                    key = f"Produit médical - {item_type}"
+                    if key not in items_data:
+                        items_data[key] = {
+                            "type": "Produit médical",
+                            "category": key,
+                            "count": 0,
+                            "total_amount": 0
+                        }
+                    
+                    items_data[key]["count"] += claim_item.qty_provided or 1
+                    
+                    # Calcul du montant
+                    amount = (claim_item.price_valuated or 
+                             claim_item.price_approved or 
+                             claim_item.price_adjusted or 
+                             claim_item.price_asked or 0)
+                    items_data[key]["total_amount"] += amount
+                    total_prestations += claim_item.qty_provided or 1
+            
+            # Données par mois
+            month_key = claim.date_to.strftime("%Y-%m") if claim.date_to else claim.date_from.strftime("%Y-%m")
+            if month_key not in monthly_data:
+                monthly_data[month_key] = {
+                    "month": month_key,
+                    "claims_count": 0,
+                    "services_count": 0,
+                    "items_count": 0,
+                    "total_amount": 0
+                }
+            
+            monthly_data[month_key]["claims_count"] += 1
+            monthly_data[month_key]["services_count"] += claim_services.count()
+            monthly_data[month_key]["items_count"] += claim_items.count()
+            
+            # Calcul du montant total du claim
+            claim_amount = 0
+            for cs in claim_services:
+                claim_amount += (cs.price_valuated or cs.price_approved or cs.price_adjusted or cs.price_asked or 0)
+            for ci in claim_items:
+                claim_amount += (ci.price_valuated or ci.price_approved or ci.price_adjusted or ci.price_asked or 0)
+            monthly_data[month_key]["total_amount"] += claim_amount
+        
+        # Compilation des données finales
+        final_data["total_prestations"] = str(total_prestations)
+        final_data["total_claims"] = str(claims.count())
+        
+        # Données par type d'acte
+        prestations_data = []
+        
+        # Ajout des services
+        for key, data in services_data.items():
+            prestations_data.append({
+                "type_acte": data["type"],
+                "categorie": data["category"],
+                "nombre_prestations": str(data["count"]),
+                "montant_total": f"{data['total_amount']:,.0f} KMF"
+            })
+        
+        # Ajout des produits médicaux
+        for key, data in items_data.items():
+            prestations_data.append({
+                "type_acte": data["type"],
+                "categorie": data["category"],
+                "nombre_prestations": str(data["count"]),
+                "montant_total": f"{data['total_amount']:,.0f} KMF"
+            })
+        
+        final_data["prestations_data"] = prestations_data
+        
+        # Données par période
+        periods_data = []
+        for month_key in sorted(monthly_data.keys()):
+            data = monthly_data[month_key]
+            # Conversion du format YYYY-MM vers nom de mois
+            month_names = {
+                "01": "Janvier", "02": "Février", "03": "Mars", "04": "Avril",
+                "05": "Mai", "06": "Juin", "07": "Juillet", "08": "Août", 
+                "09": "Septembre", "10": "Octobre", "11": "Novembre", "12": "Décembre"
+            }
+            year, month = month_key.split("-")
+            month_name = f"{month_names.get(month, month)} {year}"
+            
+            periods_data.append({
+                "periode": month_name,
+                "nombre_fpce": str(data["claims_count"]),
+                "nombre_services": str(data["services_count"]),
+                "nombre_produits": str(data["items_count"]),
+                "montant_total": f"{data['total_amount']:,.0f} KMF"
+            })
+        
+        final_data["periods_data"] = periods_data
+        
+        # Calcul du montant total général
+        total_amount = sum(data["total_amount"] for data in services_data.values()) + \
+                      sum(data["total_amount"] for data in items_data.values())
+        
+        final_data["montant_total_general"] = f"{total_amount:,.0f} KMF"
+        
+        print("Rapport prescripteur généré avec succès")
+        print(f"Total prestations: {total_prestations}")
+        print(f"Total FPCE: {claims.count()}")
+        
+        print("\n\n\n\n\n")
+        print(final_data)
+        import json
+        final_data_serializable = json.loads(json.dumps(final_data, default=str))
+        print("\n\n\n\n\n")
+        print(final_data_serializable)
+        return final_data_serializable
+        
+    except Exception as e:
+        print(f"Erreur lors de la génération du rapport prescripteur: {e}")
+        import traceback
+        traceback.print_exc()
+        return {}
 
 def invoice_private_fosa_query(user, **kwargs):
     print("Rapport Par FOSA ", kwargs)
@@ -503,6 +759,8 @@ def invoice_private_fosa_query(user, **kwargs):
     empty_data.append({"text2": "\n\n\n\n\n"})
     final_data["data2"] = empty_data
     final_data["data"] = invoice_data
+    
+    print("\n\n\n\n\n")
     print(final_data)
     return final_data
 

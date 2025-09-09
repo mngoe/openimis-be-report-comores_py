@@ -1,7 +1,7 @@
 from reportcomores.report_templates import rptBeneficiaryAmg, rptInvoiceFosaPrivate,\
-    rptInvoiceFosaPublic, rptMembership
+    rptInvoiceFosaPublic, rptMembership,rptPrescripteur
 from reportcomores.models import generate_carte_amg_query, invoice_private_fosa_query,\
-    invoice_public_fosa_query, report_membership_query
+    invoice_public_fosa_query, report_membership_query,report_prescriber_query
 
 report_definitions = [
     {
@@ -11,7 +11,7 @@ report_definitions = [
         "description": "Carte AMG",
         "module": "reportcomores",
         "python_query": generate_carte_amg_query,
-        "permission": ["131215"],
+        "permission": ["131214"],
     },
     {
         "name": "invoice_private_fosa",
@@ -20,7 +20,7 @@ report_definitions = [
         "description": "Facture globale par FOSA Privée",
         "module": "reportcomores",
         "python_query": invoice_private_fosa_query,
-        "permission": ["131215"],
+        "permission": ["131214"],
     },
     {
         "name": "invoice_public_fosa",
@@ -29,7 +29,7 @@ report_definitions = [
         "description": "Facture globale par FOSA Publique",
         "module": "reportcomores",
         "python_query": invoice_public_fosa_query,
-        "permission": ["131215"],
+        "permission": ["131214"],
     },
     {
         "name": "membership_report",
@@ -38,6 +38,15 @@ report_definitions = [
         "description": "Rapport d'adhésion pour familles polygames",
         "module": "reportcomores",
         "python_query": report_membership_query,
-        "permission": ["131215"],
-    }
+        "permission": ["131214"],
+    },
+    {
+        "name": "prescripteur_reporting",
+        "engine": 0,
+        "default_report": rptPrescripteur.template,
+        "description": "Rapport Prescripteur",
+        "module": "reportcomores",
+        "python_query": report_prescriber_query,
+        "permission": ["131214"],
+    }  
 ]
