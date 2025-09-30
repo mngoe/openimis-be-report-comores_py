@@ -331,40 +331,66 @@ class PrintedReportsHistory(models.Model):
     class Meta:
         db_table = "tblPrintedReportsHistory"
 
-
 def format_services(claim_services):
-            services = []
-            for service in claim_services:
-                service_data = {
-                    "service_code": service.service.code if service.service else "",
-                    "service_name": service.service.name if service.service else "",
-                    "service_price": float(service.service.price) if service.service and service.service.price else "",
-                    "qty_provided": float(service.qty_provided) if service.qty_provided else "",
-                    "price_asked": float(service.price_asked) if service.price_asked else "",
-                    "qty_approved": float(service.qty_approved) if service.qty_approved else "",
-                    "price_approved": float(service.price_approved) if service.price_approved else "",
-                    "price_valuated": float(service.price_valuated) if service.price_valuated else "",
-                    "price_adjusted": float(service.price_adjusted) if service.price_adjusted else "",
-                }
-                services.append(service_data)
-            return services
+    services = []
+    for service in claim_services:
+        service_strings = []
+        
+        if service.service and service.service.code:
+            service_strings.append(f"Code: {service.service.code}")
+        if service.service and service.service.name:
+            service_strings.append(f"Nom: {service.service.name}")
+        if service.service and service.service.price:
+            service_strings.append(f"Prix: {float(service.service.price):.2f}")
+        if service.qty_provided:
+            service_strings.append(f"Qte fournie: {float(service.qty_provided):.2f}")
+        if service.price_asked:
+            service_strings.append(f"Prix demande: {float(service.price_asked):.2f}")
+        # if service.qty_approved:
+            # service_strings.append(f"Qté approuvée: {float(service.qty_approved):.2f}")
+        # if service.price_approved:
+            # service_strings.append(f"Prix approuvé: {float(service.price_approved):.2f}")
+        if service.price_valuated:
+            service_strings.append(f"Prix evalue: {float(service.price_valuated):.2f}")
+        # if service.price_adjusted:
+            # service_strings.append(f"Prix ajusté: {float(service.price_adjusted):.2f}")
+        
+        # Joindre tous les éléments avec un séparateur
+        service_data = " - ".join(service_strings) if service_strings else ""
+        services.append(service_data)  
+    if len(services)==0:
+        services.append("")  
+    return services
 
-        # Fonction pour formater les items
 def format_items(claim_items):
     items = []
     for item in claim_items:
-        item_data = {
-            "item_code": item.item.code if item.item else "",
-            "item_name": item.item.name if item.item else "",
-            "item_price": float(item.item.price) if item.item and item.item.price else "",
-            "qty_provided": float(item.qty_provided) if item.qty_provided else "",
-            "price_asked": float(item.price_asked) if item.price_asked else "",
-            "qty_approved": float(item.qty_approved) if item.qty_approved else "",
-            "price_approved": float(item.price_approved) if item.price_approved else "",
-            "price_valuated": float(item.price_valuated) if item.price_valuated else "",
-            "price_adjusted": float(item.price_adjusted) if item.price_adjusted else "",
-        }
-        items.append(item_data)
+        item_strings = []
+        
+        if item.item and item.item.code:
+            item_strings.append(f"Code: {item.item.code}")
+        if item.item and item.item.name:
+            item_strings.append(f"Nom: {item.item.name}")
+        if item.item and item.item.price:
+            item_strings.append(f"Prix: {float(item.item.price):.2f}")
+        if item.qty_provided:
+            item_strings.append(f"Qte fournie: {float(item.qty_provided):.2f}")
+        if item.price_asked:
+            item_strings.append(f"Prix demande: {float(item.price_asked):.2f}")
+        # if item.qty_approved:
+            # item_strings.append(f"Qté approuvée: {float(item.qty_approved):.2f}")
+        # if item.price_approved:
+            # item_strings.append(f"Prix approuvé: {float(item.price_approved):.2f}")
+        if item.price_valuated:
+            item_strings.append(f"Prix value: {float(item.price_valuated):.2f}")
+        # if item.price_adjusted:
+            # item_strings.append(f"Prix ajusté: {float(item.price_adjusted):.2f}")
+        
+        # Joindre tous les éléments avec un séparateur
+        item_data = " - ".join(item_strings) if item_strings else ""
+        items.append(item_data) 
+    if len(items)==0:
+        items.append("")
     return items
 
 def report_prescriber_query(user, **kwargs):
@@ -378,7 +404,7 @@ def report_prescriber_query(user, **kwargs):
     
     # Récupération des paramètres
     prescriber_uuid = kwargs.get("prescriber_uuid")
-    authorized_health_facilities_id = kwargs.get("authorized_health_facilities") 
+    authorized_health_facilities_param = kwargs.get("authorized_health_facilities") 
     date_start = kwargs.get("date_start")
     date_end = kwargs.get("date_end")
     
@@ -406,18 +432,34 @@ def report_prescriber_query(user, **kwargs):
             print("Prescripteur non trouvé")
             return {}
         
-        # Récupération des FOSA
-        health_facilities = HealthFacility.objects.all()  # Par défaut, toutes les FOSA
-        if authorized_health_facilities_id and len(authorized_health_facilities_id) > 0:
-            health_facilities = HealthFacility.objects.filter(
-                id__in=authorized_health_facilities_id,
-                validity_to__isnull=True
-            )
+        health_facilities = HealthFacility.objects.all()          
+        if authorized_health_facilities_param:
+            if isinstance(authorized_health_facilities_param, str):
+                try:
+                    authorized_health_facilities_ids = [
+                        int(hf_id.strip()) 
+                        for hf_id in authorized_health_facilities_param.split(',') 
+                        if hf_id.strip().isdigit()
+                    ]
+                except ValueError as e:
+                    print(f"Erreur de conversion des IDs FOSA: {e}")
+                    authorized_health_facilities_ids = []
+            elif isinstance(authorized_health_facilities_param, list):
+                authorized_health_facilities_ids = authorized_health_facilities_param
+            else:
+                authorized_health_facilities_ids = []
+            
+            if authorized_health_facilities_ids:
+                health_facilities = HealthFacility.objects.filter(
+                    id__in=authorized_health_facilities_ids,
+                    validity_to__isnull=True
+                )
+                print(f"FOSA autorisées filtrées: {authorized_health_facilities_ids}")
         
         health_facilities_tostring_array = [
-        {
-            "hf_name":f"{hf.name} - {hf.code}",
-        }
+            {
+                "hf_name": f"{hf.name} - {hf.code}",
+            }
             for hf in health_facilities
         ]
         
@@ -429,97 +471,71 @@ def report_prescriber_query(user, **kwargs):
             date_to__lte=date_to_object,
         )
 
-
-
         # Données de base du rapport
         today = datetime.datetime.now()
         final_data = {
             "prescriber_name": f"{prescriber.last_name} {prescriber.other_names}".strip(),
             "prescriber_code": prescriber.code,
-            "prescriber_speciality":f"{prescriber.speciality.code} - {prescriber.speciality.speciality}".strip(),
+            "prescriber_speciality": f"{prescriber.speciality.code} - {prescriber.speciality.speciality}".strip(),
             "main_health_facility": prescriber.main_health_facility,
             "authorized_health_facilities": health_facilities_tostring_array,
             "entry_date": prescriber.entry_date,
             "release_date": prescriber.release_date,
-            "date_start":date_start,
-            "date_end":date_end,
+            "date_start": date_start,
+            "date_end": date_end,
             "generation_date": today.strftime("%d/%m/%Y"),
             "generated_by": user.username if hasattr(user, 'username') else 'Système'
         }
         
         # Initialisation des compteurs
-        sum_prestations_initiated = 0
-        sum_prestations_validated = 0
-        sum_prestations_rejected = 0
-        nb_person_refered=0
+        sum_prestations_initiated = claims.filter(validity_to__isnull=True).count()
+        sum_prestations_rejected = claims.filter(status=Claim.STATUS_REJECTED, validity_to__isnull=True).count()
+        sum_prestations_validated = claims.filter(status=Claim.STATUS_VALUATED, validity_to__isnull=True).count()
+        nb_person_refered = claims.filter(validity_to__isnull=True).distinct('insuree').count()
 
-        # sum_review_initiated=0
-        # sum_review_delivered=0
+        ratio_validated = (sum_prestations_validated / sum_prestations_initiated * 100) if sum_prestations_initiated > 0 else 0
+        ratio_rejected = (sum_prestations_rejected / sum_prestations_initiated * 100) if sum_prestations_initiated > 0 else 0
 
-
-        sum_prestations_initiated=claims.filter(validity_to__isnull=True).count()
-        sum_prestations_rejected=claims.filter(status=Claim.STATUS_REJECTED,validity_to__isnull=True).count()
-        sum_prestations_validated=claims.filter(status=Claim.STATUS_VALUATED,validity_to__isnull=True).count()
-        nb_person_refered=claims.filter(validity_to__isnull=True).distinct('insuree').count()
-        
-        # Compter les claims distincts par statut de review
-        # sum_review_initiated = claims.filter(review_status=Claim.REVIEW_SELECTED).distinct('claim_code').count()
-        # sum_review_delivered = claims.filter(review_status=Claim.REVIEW_DELIVERED).distinct('claim_code').count()
-
-
-
-        ratio_validated=(sum_prestations_validated/sum_prestations_initiated)*100
-        ratio_rejected=(sum_prestations_rejected/sum_prestations_initiated)*100
-
-   
-
-
-        final_data["sum_prestations_initiated"]=sum_prestations_initiated
-        final_data["sum_prestations_validated"]=sum_prestations_validated
-        final_data["sum_prestations_rejected"]=sum_prestations_rejected
-        final_data["nb_person_refered"]=nb_person_refered
-        final_data["ratio_validated"]=ratio_validated
-        final_data["ratio_rejected"]=ratio_rejected
-
-
-
-        claims_filtered=claims.filter(validity_to__isnull=True)
+        final_data["sum_prestations_initiated"] = sum_prestations_initiated
+        final_data["sum_prestations_validated"] = sum_prestations_validated
+        final_data["sum_prestations_rejected"] = sum_prestations_rejected
+        final_data["nb_person_refered"] = nb_person_refered
+        final_data["ratio_validated"] = round(ratio_validated, 2)
+        final_data["ratio_rejected"] = round(ratio_rejected, 2)
 
         claims_filtered = claims.filter(validity_to__isnull=True)
-
+        claims_serialized = []
+        
         for claim in claims_filtered:
-            claims_serialized = []
-            for claim in claims_filtered:
-                claim_data = {
-                    "insuree_name": f"{claim.insuree.other_names} {claim.insuree.last_name}" if claim.insuree else "",
-                    "insuree_code": claim.insuree.chf_id if claim.insuree else "",
-                    "code": claim.code,
-                    "date_from": claim.date_from.isoformat() if claim.date_from else "",
-                    "date_to": claim.date_to.isoformat() if claim.date_to else "",
-                    "status_display": get_claim_status_display(claim.status),
-                    "claimed": float(claim.claimed) if claim.claimed else "",
-                    "approved": float(claim.approved) if claim.approved else "",
-                    "date_claimed": claim.date_claimed.isoformat() if claim.date_claimed else "",
-                    "date_processed": claim.date_processed.isoformat() if claim.date_processed else "",
-                    "health_facility_name": claim.health_facility.name if claim.health_facility else "",
-                    "health_facility_code": claim.health_facility.code if claim.health_facility else "",
-                    "icd_code": claim.icd.code if claim.icd else "",
-                    "icd_name": claim.icd.name if claim.icd else "",
-                    "services": format_services(claim.services.all()),
-                    "items": format_items(claim.items.all())
-                }
-                claims_serialized.append(claim_data)
+            claim_data = {
+                "insuree_name": f"{claim.insuree.other_names} {claim.insuree.last_name}" if claim.insuree else "",
+                "insuree_code": claim.insuree.chf_id if claim.insuree else "",
+                "code": claim.code,
+                "date_from": claim.date_from.isoformat() if claim.date_from else "",
+                "date_to": claim.date_to.isoformat() if claim.date_to else "",
+                "status_display": get_claim_status_display(claim.status),
+                "claimed": f"{float(claim.claimed)}" if claim.claimed else "",
+                "approved": f"{float(claim.approved)}" if claim.approved else "",
+                "date_claimed": claim.date_claimed.isoformat() if claim.date_claimed else "",
+                "date_processed": claim.date_processed.isoformat() if claim.date_processed else "",
+                "health_facility_name": claim.health_facility.name if claim.health_facility else "",
+                "health_facility_code": claim.health_facility.code if claim.health_facility else "",
+                "icd_code": claim.icd.code if claim.icd else "",
+                "icd_name": claim.icd.name if claim.icd else "",
+                "services": format_services(claim.services.all()),  # Maintenant un tableau de strings
+                "itemlist": format_items(claim.items.all())  # Maintenant un tableau de strings
+            }
+            claims_serialized.append(claim_data)
         
-        final_data["claims"]=claims_serialized
+        final_data["claims"] = claims_serialized
         
-        print("\n\n\n\n\n")
-        print(final_data)
+        print(f"Nombre de claims trouvés: {len(claims_serialized)}")
+        print(f"FOSA utilisées: {[hf['hf_name'] for hf in health_facilities_tostring_array]}")
         
         import json
         final_data_serializable = json.loads(json.dumps(final_data, default=str))
-        
-        print("\n\n\n\n\n")
         print(final_data_serializable)
+        
         return final_data_serializable
         
     except Exception as e:
