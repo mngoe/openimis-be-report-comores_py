@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import OuterRef, Subquery, Avg, Q
 from report.services import run_stored_proc_report
 from insuree.models import Insuree, Family
 import qrcode
@@ -7,7 +8,7 @@ import base64, core, datetime
 from insuree.models import InsureePolicy
 import calendar
 from location.models import Location, HealthFacility
-from claim.models import Claim, ClaimService, ClaimItem
+from claim.models import Claim, ClaimService, ClaimItem,Speciality,Status,Prescriber
 import random
 from policy.models import Policy
 import imghdr, os
@@ -89,6 +90,33 @@ def get_rejection_reason_display(reason):
         20: "reclamation invalide",
     }
     return reason_map.get(reason, "inconnu")
+
+
+def get_service_category_display(code):
+    """
+    Returns the human-readable label for a medical service category.
+    """
+    service_map = {
+        "S": "Surgery",
+        "D": "Delivery",
+        "A": "Antenatal",
+        "H": "Hospitalization",
+        "C": "Consultation",
+        "O": "Other",
+        "V": "Visit",
+    }
+    return service_map.get(code, "Unknown")
+
+
+def get_item_type_display(code):
+    """
+    Returns the human-readable label for a medical item type.
+    """
+    item_map = {
+        "D": "Drug",
+        "M": "Consumable",
+    }
+    return item_map.get(code, "Unknown")
 
 
 def _convert_nnn_fr(val):
@@ -567,6 +595,188 @@ def report_prescriber_query(user, **kwargs):
         import traceback
         traceback.print_exc()
         return {}
+
+
+def get_most_frequent_category(claims):
+    """
+    Returns the most frequent service category among the given claims.
+    """
+    categories = []
+    for claim in claims:
+        categories.extend([s.category for s in claim.services.all() if s.category])
+    if not categories:
+        return None
+    return Counter(categories).most_common(1)[0][0]
+
+
+def get_most_frequent_item_type(claims):
+    """
+    Returns the most frequent item type among the given claims.
+    """
+    types = []
+    for claim in claims:
+        types.extend([i.type for i in claim.items.all() if i.type])
+    if not types:
+        return None
+    return Counter(types).most_common(1)[0][0]
+
+def report_prescriber_FOSA_query(user, **kwargs):
+    """
+    Génère un rapport listant les prescripeur et leur volume de prestation 
+
+    """
+
+    import datetime
+    import json
+
+    print("Rapport Par Prescripteur", kwargs)
+
+    # Paramètres obligatoires
+    hf_uuid = kwargs.get("hf_uuid")
+    date_start = kwargs.get("date_start")
+    date_end = kwargs.get("date_end")
+
+    if not all([hf_uuid, date_start, date_end]):
+        print("Paramètres manquants pour le rapport prescripteur")
+        return {}
+
+    # Paramètres facultatifs
+    speciality_uuid = kwargs.get("speciality_uuid")
+    prescriber_status_code = kwargs.get("prescriber_status_code")
+    act_type = kwargs.get("act_type")  # type d'acte : service, article (1:service,2:article) 
+    claim_status=kwargs.get("claim_status")
+
+    date_from_object = datetime.datetime.strptime(date_start, "%Y-%m-%d")
+    date_to_object = datetime.datetime.strptime(date_end, "%Y-%m-%d")
+
+    try:
+        speciality = Speciality.objects.filter(validity_to__isnull=True,uuid=speciality_uuid)
+        status = Status.objects.filter(code=prescriber_status_code,validity_to__isnull=True).first()
+        hf = HealthFacility.objects.filter(uuid=hf_uuid,validity_to__isnull=True).first()  
+
+        prescribers=Prescriber.objects.all()
+        if speciality:
+            prescribers = prescribers.filter(speciality=speciality)
+        if status:
+            prescribers = prescribers.filter(status=status)
+        if hf:
+            prescribers = prescribers.filter( 
+                Q(main_health_facility=hf) | Q(authorized_health_facilities=hf)
+            )
+
+        claims=Claim.objects.all().filter(
+            validity_to__isnull=True,
+            prescriber__in=prescribers,
+            health_facility=hf,
+            date_from__gte=date_from_object,
+            date_to__lte=date_to_object
+            )
+        
+        claims_filtered=Claim.objects.all().filter(
+            validity_to__isnull=True,
+            prescriber__in=prescribers,
+            health_facility=hf,
+            date_from__gte=date_from_object,
+            date_to__lte=date_to_object
+            )
+        if claim_status:
+            claims_filtered=claims.filter(status=claim_status)
+
+        active_prescribers = Prescriber.objects.filter(
+            id__in=claims_filtered.values_list('prescriber_id', flat=True),
+        ).distinct()
+
+        prescriber_stats = []
+
+        for prescriber in active_prescribers:
+            prescriber_claims = claims.filter(prescriber=prescriber)
+            prescriber_claims_filtered = claims_filtered.filter(prescriber=prescriber)
+            nbprestation_initiated=prescriber_claims.count()
+            nbprestation_rejected=prescriber_claims.filter(status=Claim.STATUS_REJECTED).count()
+            ratio_rejection=(nbprestation_rejected/nbprestation_initiated)*100
+
+
+            if act_type:
+                for claim_p in prescriber_claims:
+                    if act_type==1:#article
+                        #on enleve le montant des services
+                        services_list =claim_p.services.all()
+                        montant_service_asked = sum(
+                            (s.qty_provided) * (s.price_asked or 0) for s in services_list
+                        )
+                        montant_service_valuated = sum(
+                            (s.qty_provided) * (s.price_valuated or 0) for s in services_list
+                        )
+                        claim_p.claimed=claim_p.claimed-montant_service_asked
+                        claim_p.valuated=claim_p.valuated-montant_service_valuated
+                    if act_type==2:#service
+                        #on enleve le montant des artice
+                        items =claim_p.items.all()
+                        montant_item_asked = sum(
+                            (i.qty_provided) * (i.price_asked or 0) for i in items
+                        )
+                        montant_item_valuated = sum(
+                            (i.qty_provided) * (i.price_valuated or 0) for i in items
+                        )
+                        claim_p.claimed=claim_p.claimed-montant_item_asked
+                        claim_p.valuated=claim_p.valuated-montant_item_valuated
+
+
+            montant_reclame= sum(
+                c.claimed  for c in prescriber_claims
+            )
+            montant_valide= sum(
+                c.valuated for c in prescriber_claims
+            )
+
+            ratio_approbation= (montant_valide/montant_reclame)*100
+
+
+            category_service_dominant = get_most_frequent_category(prescriber_claims_filtered)
+            item_type_dominant = get_most_frequent_item_type(prescriber_claims_filtered)
+
+            dominant=""
+
+            if act_type:
+                if act_type==1:
+                    dominant=get_service_category_display(category_service_dominant)
+                if act_type==2:
+                    dominant=get_item_type_display(item_type_dominant)
+            else:
+                dominant=f"categorie service:{get_service_category_display(category_service_dominant)}  -  type article{get_item_type_display(item_type_dominant)} "
+
+
+            latest_claim = prescriber_claims_filtered.order_by('-date_claimed').first()
+            last_prestation_date = latest_claim.date_claimed if latest_claim else None 
+
+
+            stats={
+                "prescriber_code": f"{prescriber.code} - {prescriber.last_name} {prescriber.other_names} - {prescriber.nin}".strip(),
+                "prescriber_speciality": f"{prescriber.specility.code} - {prescriber.speciality.speciality} ".strip(),
+                "nb_presctations_inities": f"{nbprestation_initiated}",
+                "nb_presctations_rejetes": f"{nbprestation_rejected}",
+                "ratio_rejection":f"{ratio_rejection}",
+                "montant_reclame":f"{montant_reclame} KMF",
+                "montant_valide":f"{montant_valide} KMF",
+                "ratio_approbation":f"{ratio_approbation}",
+                "dominant":f"{dominant}",
+                "last_prestation_date":f"{last_prestation_date}"
+            }
+
+            prescriber_stats.append(stats)
+
+
+        final_data =stats 
+
+        final_data_serializable = json.loads(json.dumps(final_data, default=str))
+        return final_data_serializable
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Erreur lors de la génération du rapport prescripteur: {e}")
+        return {}
+
 
 def invoice_private_fosa_query(user, **kwargs):
     print("Rapport Par FOSA ", kwargs)
