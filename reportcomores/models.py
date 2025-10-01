@@ -16,6 +16,7 @@ from PIL import Image
 from contribution.models import Premium
 from django.utils.translation import gettext as _
 from django.utils.translation import override
+from collections import Counter
 
 val_de_zero = [
     'million', 'milliard', 'billion',
@@ -622,8 +623,7 @@ def get_most_frequent_item_type(claims):
 
 def report_prescriber_FOSA_query(user, **kwargs):
     """
-    Génère un rapport listant les prescripeur et leur volume de prestation 
-
+    Génère un rapport listant les prescripteurs et leur volume de prestation.
     """
 
     import datetime
@@ -643,47 +643,43 @@ def report_prescriber_FOSA_query(user, **kwargs):
     # Paramètres facultatifs
     speciality_uuid = kwargs.get("speciality_uuid")
     prescriber_status_code = kwargs.get("prescriber_status_code")
-    act_type = kwargs.get("act_type")  # type d'acte : service, article (1:service,2:article) 
-    claim_status=kwargs.get("claim_status")
+    act_type = kwargs.get("act_type")  # 1: article, 2: service
+    claim_status = kwargs.get("claim_status")
 
     date_from_object = datetime.datetime.strptime(date_start, "%Y-%m-%d")
     date_to_object = datetime.datetime.strptime(date_end, "%Y-%m-%d")
 
     try:
-        speciality = Speciality.objects.filter(validity_to__isnull=True,uuid=speciality_uuid)
-        status = Status.objects.filter(code=prescriber_status_code,validity_to__isnull=True).first()
-        hf = HealthFacility.objects.filter(uuid=hf_uuid,validity_to__isnull=True).first()  
+        speciality = Speciality.objects.filter(validity_to__isnull=True, uuid=speciality_uuid).first()
+        status = Status.objects.filter(code=prescriber_status_code, validity_to__isnull=True).first()
+        hf = HealthFacility.objects.filter(uuid=hf_uuid, validity_to__isnull=True).first()
 
-        prescribers=Prescriber.objects.all()
+        prescribers = Prescriber.objects.all()
         if speciality:
             prescribers = prescribers.filter(speciality=speciality)
         if status:
             prescribers = prescribers.filter(status=status)
         if hf:
-            prescribers = prescribers.filter( 
+            prescribers = prescribers.filter(
                 Q(main_health_facility=hf) | Q(authorized_health_facilities=hf)
             )
 
-        claims=Claim.objects.all().filter(
+        # Liste complète de claims
+        claims = Claim.objects.filter(
             validity_to__isnull=True,
             prescriber__in=prescribers,
             health_facility=hf,
             date_from__gte=date_from_object,
-            date_to__lte=date_to_object
-            )
-        
-        claims_filtered=Claim.objects.all().filter(
-            validity_to__isnull=True,
-            prescriber__in=prescribers,
-            health_facility=hf,
-            date_from__gte=date_from_object,
-            date_to__lte=date_to_object
-            )
+            date_to__lte=date_to_object,
+        )
+
+        # Liste filtrée si on impose un statut
+        claims_filtered = claims
         if claim_status:
-            claims_filtered=claims.filter(status=claim_status)
+            claims_filtered = claims.filter(status=claim_status)
 
         active_prescribers = Prescriber.objects.filter(
-            id__in=claims_filtered.values_list('prescriber_id', flat=True),
+            id__in=claims_filtered.values_list("prescriber_id", flat=True),
         ).distinct()
 
         prescriber_stats = []
@@ -691,85 +687,80 @@ def report_prescriber_FOSA_query(user, **kwargs):
         for prescriber in active_prescribers:
             prescriber_claims = claims.filter(prescriber=prescriber)
             prescriber_claims_filtered = claims_filtered.filter(prescriber=prescriber)
-            nbprestation_initiated=prescriber_claims.count()
-            nbprestation_rejected=prescriber_claims.filter(status=Claim.STATUS_REJECTED).count()
-            ratio_rejection=(nbprestation_rejected/nbprestation_initiated)*100
 
+            nb_prestations_initiees = prescriber_claims.count()
+            nb_prestations_rejetees = prescriber_claims.filter(status=Claim.STATUS_REJECTED).count()
+            ratio_rejection = (
+                (nb_prestations_rejetees / nb_prestations_initiees) * 100
+                if nb_prestations_initiees > 0 else 0
+            )
 
+            # Ajustement selon le type d'acte demandé
             if act_type:
                 for claim_p in prescriber_claims:
-                    if act_type==1:#article
-                        #on enleve le montant des services
-                        services_list =claim_p.services.all()
+                    if act_type == 1:  # article uniquement
+                        services_list = claim_p.services.all()
                         montant_service_asked = sum(
                             (s.qty_provided) * (s.price_asked or 0) for s in services_list
                         )
                         montant_service_valuated = sum(
                             (s.qty_provided) * (s.price_valuated or 0) for s in services_list
                         )
-                        claim_p.claimed=claim_p.claimed-montant_service_asked
-                        claim_p.valuated=claim_p.valuated-montant_service_valuated
-                    if act_type==2:#service
-                        #on enleve le montant des artice
-                        items =claim_p.items.all()
+                        claim_p.claimed -= montant_service_asked
+                        claim_p.valuated -= montant_service_valuated
+
+                    elif act_type == 2:  # service uniquement
+                        items = claim_p.items.all()
                         montant_item_asked = sum(
                             (i.qty_provided) * (i.price_asked or 0) for i in items
                         )
                         montant_item_valuated = sum(
                             (i.qty_provided) * (i.price_valuated or 0) for i in items
                         )
-                        claim_p.claimed=claim_p.claimed-montant_item_asked
-                        claim_p.valuated=claim_p.valuated-montant_item_valuated
+                        claim_p.claimed -= montant_item_asked
+                        claim_p.valuated -= montant_item_valuated
 
-
-            montant_reclame= sum(
-                c.claimed  for c in prescriber_claims
-            )
-            montant_valide= sum(
-                c.valuated for c in prescriber_claims
+            montant_reclame = sum(c.claimed for c in prescriber_claims)
+            montant_valide = sum(c.valuated for c in prescriber_claims)
+            ratio_approbation = (
+                (montant_valide / montant_reclame) * 100 if montant_reclame > 0 else 0
             )
 
-            ratio_approbation= (montant_valide/montant_reclame)*100
-
-
+            # Analyse sur claims filtrés
             category_service_dominant = get_most_frequent_category(prescriber_claims_filtered)
             item_type_dominant = get_most_frequent_item_type(prescriber_claims_filtered)
 
             dominant=""
-
-            if act_type:
-                if act_type==1:
-                    dominant=get_service_category_display(category_service_dominant)
-                if act_type==2:
-                    dominant=get_item_type_display(item_type_dominant)
+            if act_type == 1:
+                dominant = get_service_category_display(category_service_dominant)
+            elif act_type == 2:
+                dominant = get_item_type_display(item_type_dominant)
             else:
-                dominant=f"categorie service:{get_service_category_display(category_service_dominant)}  -  type article{get_item_type_display(item_type_dominant)} "
+                dominant = (
+                    f"Catégorie service: {get_service_category_display(category_service_dominant)} "
+                    f"- Type article: {get_item_type_display(item_type_dominant)}"
+                )
 
+            latest_claim = prescriber_claims_filtered.order_by("-date_claimed").first()
+            last_prestation_date = latest_claim.date_claimed if latest_claim else None
 
-            latest_claim = prescriber_claims_filtered.order_by('-date_claimed').first()
-            last_prestation_date = latest_claim.date_claimed if latest_claim else None 
-
-
-            stats={
+            stats = {
                 "prescriber_code": f"{prescriber.code} - {prescriber.last_name} {prescriber.other_names} - {prescriber.nin}".strip(),
-                "prescriber_speciality": f"{prescriber.specility.code} - {prescriber.speciality.speciality} ".strip(),
-                "nb_presctations_inities": f"{nbprestation_initiated}",
-                "nb_presctations_rejetes": f"{nbprestation_rejected}",
-                "ratio_rejection":f"{ratio_rejection}",
-                "montant_reclame":f"{montant_reclame} KMF",
-                "montant_valide":f"{montant_valide} KMF",
-                "ratio_approbation":f"{ratio_approbation}",
-                "dominant":f"{dominant}",
-                "last_prestation_date":f"{last_prestation_date}"
+                "prescriber_speciality": f"{prescriber.speciality.code} - {prescriber.speciality.speciality}".strip(),
+                "nb_prestations_initiees": nb_prestations_initiees,
+                "nb_prestations_rejetees": nb_prestations_rejetees,
+                "ratio_rejection": f"{ratio_rejection:.2f}%",
+                "montant_reclame": f"{montant_reclame} KMF",
+                "montant_valide": f"{montant_valide} KMF",
+                "ratio_approbation": f"{ratio_approbation:.2f}%",
+                "dominant": dominant,
+                "last_prestation_date": str(last_prestation_date) if last_prestation_date else None,
             }
 
             prescriber_stats.append(stats)
 
-
-        final_data =stats 
-
-        final_data_serializable = json.loads(json.dumps(final_data, default=str))
-        return final_data_serializable
+        # Retourne toute la liste, pas juste le dernier élément
+        return json.loads(json.dumps(prescriber_stats, default=str))
 
     except Exception as e:
         import traceback
