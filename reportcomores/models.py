@@ -604,7 +604,7 @@ def get_most_frequent_category(claims):
     """
     categories = []
     for claim in claims:
-        categories.extend([s.category for s in claim.services.all() if s.category])
+        categories.extend([s.service.category for s in claim.services.all() if s.service.category])
     if not categories:
         return None
     return Counter(categories).most_common(1)[0][0]
@@ -616,7 +616,7 @@ def get_most_frequent_item_type(claims):
     """
     types = []
     for claim in claims:
-        types.extend([i.type for i in claim.items.all() if i.type])
+        types.extend([i.item.type for i in claim.items.all() if i.item.type])
     if not types:
         return None
     return Counter(types).most_common(1)[0][0]
@@ -651,7 +651,7 @@ def report_prescriber_FOSA_query(user, **kwargs):
 
     try:
         speciality = Speciality.objects.filter(validity_to__isnull=True, uuid=speciality_uuid).first()
-        status = Status.objects.filter(code=prescriber_status_code, validity_to__isnull=True).first()
+        status = Status.objects.filter(code=prescriber_status_code).first()
         hf = HealthFacility.objects.filter(uuid=hf_uuid, validity_to__isnull=True).first()
 
         prescribers = Prescriber.objects.all()
@@ -707,7 +707,7 @@ def report_prescriber_FOSA_query(user, **kwargs):
                             (s.qty_provided) * (s.price_valuated or 0) for s in services_list
                         )
                         claim_p.claimed -= montant_service_asked
-                        claim_p.valuated -= montant_service_valuated
+                        claim_p.approved -= montant_service_valuated
 
                     elif act_type == 2:  # service uniquement
                         items = claim_p.items.all()
@@ -718,10 +718,10 @@ def report_prescriber_FOSA_query(user, **kwargs):
                             (i.qty_provided) * (i.price_valuated or 0) for i in items
                         )
                         claim_p.claimed -= montant_item_asked
-                        claim_p.valuated -= montant_item_valuated
+                        claim_p.approved -= montant_item_valuated
 
-            montant_reclame = sum(c.claimed for c in prescriber_claims)
-            montant_valide = sum(c.valuated for c in prescriber_claims)
+            montant_reclame = sum((c.claimed or 0) for c in prescriber_claims)
+            montant_valide = sum((c.approved or 0) for c in prescriber_claims)
             ratio_approbation = (
                 (montant_valide / montant_reclame) * 100 if montant_reclame > 0 else 0
             )
@@ -760,7 +760,10 @@ def report_prescriber_FOSA_query(user, **kwargs):
             prescriber_stats.append(stats)
 
         # Retourne toute la liste, pas juste le dernier élément
-        return json.loads(json.dumps(prescriber_stats, default=str))
+        final_data_serializable= json.loads(json.dumps(prescriber_stats, default=str))
+        print(final_data_serializable)
+
+        return final_data_serializable
 
     except Exception as e:
         import traceback
