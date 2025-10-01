@@ -52,16 +52,43 @@ denoms_fr = (
     'octodecillions', 'icosillions', 'vigintillions'
 )
 
-def get_claim_status_display(status):
+def get_claim_status_display(status, rejection_reason=None):
     status_map = {
-        1: "REJECTED",
-        2: "ENTERED", 
-        4: "CHECKED",
-        8: "PROCESSED",
-        16: "VALUATED"
+        1: "rejete",
+        2: "entree", 
+        4: "verifie",
+        8: "traite",
+        16: "valide"
     }
-    return status_map.get(status, "UNKNOWN")
+    stat = status_map.get(status, "inconnu")
+    if status == 1 and rejection_reason is not None:
+        rej = get_rejection_reason_display(rejection_reason)
+        return f"{stat} - {rej}"
+    return stat
 
+def get_rejection_reason_display(reason):
+    reason_map = {
+        1: "item ou service invalide",
+        2: "non dans liste de prix",
+        3: "aucun produit trouve",
+        4: "limitation categorie",
+        5: "echec frequence",
+# REJECTION_REASON_DUPLICATED = 6
+        7: "famille",
+# REJECTION_REASON_ICD_NOT_IN_LIST = 8
+        9: "date cible",
+        10: "type de soin",
+        11: "max admissions hopital",
+        12: "max visites",
+        13: "max consultations",
+        14: "max chirurgies",
+        15: "max accouchements",
+        16: "quantite depassee",
+        17: "echec delai attente",
+        19: "max prenatals",
+        20: "reclamation invalide",
+    }
+    return reason_map.get(reason, "inconnu")
 
 
 def _convert_nnn_fr(val):
@@ -341,26 +368,24 @@ def format_services(claim_services):
         if service.service and service.service.name:
             service_strings.append(f"Nom: {service.service.name}")
         if service.service and service.service.price:
-            service_strings.append(f"Prix: {float(service.service.price):.2f}")
+            service_strings.append(f"Prix: {float(service.service.price):.2f} KMF")
         if service.qty_provided:
             service_strings.append(f"Qte fournie: {float(service.qty_provided):.2f}")
         if service.price_asked:
-            service_strings.append(f"Prix demande: {float(service.price_asked):.2f}")
+            service_strings.append(f"Prix demande: {float(service.price_asked):.2f} KMF")
         # if service.qty_approved:
             # service_strings.append(f"Qté approuvée: {float(service.qty_approved):.2f}")
         # if service.price_approved:
             # service_strings.append(f"Prix approuvé: {float(service.price_approved):.2f}")
         if service.price_valuated:
-            service_strings.append(f"Prix evalue: {float(service.price_valuated):.2f}")
+            service_strings.append(f"Prix evalue: {float(service.price_valuated):.2f} KMF")
         # if service.price_adjusted:
             # service_strings.append(f"Prix ajusté: {float(service.price_adjusted):.2f}")
-        
         # Joindre tous les éléments avec un séparateur
         service_data = " - ".join(service_strings) if service_strings else ""
-        services.append(service_data)  
-    if len(services)==0:
-        services.append("")  
-    return services
+        services.append(service_data) 
+    service_merged="               | ".join(services) if services else ""
+    return service_merged
 
 def format_items(claim_items):
     items = []
@@ -372,26 +397,25 @@ def format_items(claim_items):
         if item.item and item.item.name:
             item_strings.append(f"Nom: {item.item.name}")
         if item.item and item.item.price:
-            item_strings.append(f"Prix: {float(item.item.price):.2f}")
+            item_strings.append(f"Prix: {float(item.item.price):.2f} KMF")
         if item.qty_provided:
             item_strings.append(f"Qte fournie: {float(item.qty_provided):.2f}")
         if item.price_asked:
-            item_strings.append(f"Prix demande: {float(item.price_asked):.2f}")
+            item_strings.append(f"Prix demande: {float(item.price_asked):.2f} KMF")
         # if item.qty_approved:
             # item_strings.append(f"Qté approuvée: {float(item.qty_approved):.2f}")
         # if item.price_approved:
             # item_strings.append(f"Prix approuvé: {float(item.price_approved):.2f}")
         if item.price_valuated:
-            item_strings.append(f"Prix value: {float(item.price_valuated):.2f}")
+            item_strings.append(f"Prix value: {float(item.price_valuated):.2f} KMF")
         # if item.price_adjusted:
             # item_strings.append(f"Prix ajusté: {float(item.price_adjusted):.2f}")
         
         # Joindre tous les éléments avec un séparateur
         item_data = " - ".join(item_strings) if item_strings else ""
         items.append(item_data) 
-    if len(items)==0:
-        items.append("")
-    return items
+    item_merged="               | ".join(items) if items else ""
+    return item_merged
 
 def report_prescriber_query(user, **kwargs):
     """
@@ -513,9 +537,9 @@ def report_prescriber_query(user, **kwargs):
                 "code": claim.code,
                 "date_from": claim.date_from.isoformat() if claim.date_from else "",
                 "date_to": claim.date_to.isoformat() if claim.date_to else "",
-                "status_display": get_claim_status_display(claim.status),
-                "claimed": f"{float(claim.claimed)}" if claim.claimed else "",
-                "approved": f"{float(claim.approved)}" if claim.approved else "",
+                "status_display": get_claim_status_display(claim.status,claim.rejection_reason),
+                "claimed": f"{float(claim.claimed)}" if claim.claimed else "0",
+                "approved": f"{float(claim.approved)}" if claim.approved else "0",
                 "date_claimed": claim.date_claimed.isoformat() if claim.date_claimed else "",
                 "date_processed": claim.date_processed.isoformat() if claim.date_processed else "",
                 "health_facility_name": claim.health_facility.name if claim.health_facility else "",
