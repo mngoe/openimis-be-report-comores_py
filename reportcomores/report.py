@@ -1,7 +1,7 @@
 from reportcomores.report_templates import rptBeneficiaryAmg, rptInvoiceFosaPrivate,\
-    rptInvoiceFosaPublic, rptMembership,rptPrescripteur
+    rptInvoiceFosaPublic, rptMembership,rptPrescripteur,rptFosaPrescripteur
 from reportcomores.models import generate_carte_amg_query, invoice_private_fosa_query,\
-    invoice_public_fosa_query, report_membership_query,report_prescriber_query
+    invoice_public_fosa_query, report_membership_query,report_prescriber_query,report_fosa_prescriber_query
 
 report_definitions = [
     {
@@ -48,5 +48,14 @@ report_definitions = [
         "module": "reportcomores",
         "python_query": report_prescriber_query,
         "permission": ["131214"],
-    }  
+    },
+    {
+        "name": "prescripteur_fosa_reporting",
+        "engine": 0,
+        "default_report": rptFosaPrescripteur.template,
+        "description": "Rapport Prescripteur fosa",
+        "module": "reportcomores",
+        "python_query": report_fosa_prescriber_query,
+        "permission": ["131214"],
+    } 
 ]
