@@ -11,7 +11,7 @@ report_definitions = [
         "description": "Carte AMG",
         "module": "reportcomores",
         "python_query": generate_carte_amg_query,
-        "permission": ["131214"],
+        "permission": ["131215"],
     },
     {
         "name": "invoice_private_fosa",
@@ -20,7 +20,7 @@ report_definitions = [
         "description": "Facture globale par FOSA Privée",
         "module": "reportcomores",
         "python_query": invoice_private_fosa_query,
-        "permission": ["131214"],
+        "permission": ["131215"],
     },
     {
         "name": "invoice_public_fosa",
@@ -29,7 +29,7 @@ report_definitions = [
         "description": "Facture globale par FOSA Publique",
         "module": "reportcomores",
         "python_query": invoice_public_fosa_query,
-        "permission": ["131214"],
+        "permission": ["131215"],
     },
     {
         "name": "membership_report",
@@ -38,7 +38,7 @@ report_definitions = [
         "description": "Rapport d'adhésion pour familles polygames",
         "module": "reportcomores",
         "python_query": report_membership_query,
-        "permission": ["131214"],
+        "permission": ["131215"],
     },
     {
         "name": "prescripteur_reporting",
@@ -47,7 +47,7 @@ report_definitions = [
         "description": "Rapport Prescripteur",
         "module": "reportcomores",
         "python_query": report_prescriber_query,
-        "permission": ["131214"],
+        "permission": ["131215"],
     },
     {
         "name": "prescripteur_fosa_reporting",
@@ -56,6 +56,6 @@ report_definitions = [
         "description": "Rapport Prescripteur fosa",
         "module": "reportcomores",
         "python_query": report_fosa_prescriber_query,
-        "permission": ["131214"],
+        "permission": ["131215"],
     } 
 ]
