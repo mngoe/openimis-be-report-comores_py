@@ -17,6 +17,14 @@ from contribution.models import Premium
 from django.utils.translation import gettext as _
 from django.utils.translation import override
 from collections import Counter
+import traceback
+import datetime
+import json
+from claim.models import ClaimAdmin, Claim, ClaimService, ClaimItem, Prescriber
+from medical.models import Service, Item
+from location.models import HealthFacility
+
+
 
 val_de_zero = [
     'million', 'milliard', 'billion',
@@ -481,9 +489,6 @@ def report_prescriber_query(user, **kwargs):
     
     # Récupération des informations de base
     try:
-        from claim.models import ClaimAdmin, Claim, ClaimService, ClaimItem, Prescriber
-        from medical.models import Service, Item
-        from location.models import HealthFacility
         
         # Récupération du prescripteur
         prescriber = Prescriber.objects.filter(
@@ -595,7 +600,6 @@ def report_prescriber_query(user, **kwargs):
         print(f"Nombre de claims trouvés: {len(claims_serialized)}")
         print(f"FOSA utilisées: {[hf['hf_name'] for hf in health_facilities_tostring_array]}")
         
-        import json
         final_data_serializable = json.loads(json.dumps(final_data, default=str))
         print(final_data_serializable)
         
@@ -603,7 +607,6 @@ def report_prescriber_query(user, **kwargs):
         
     except Exception as e:
         print(f"Erreur lors de la génération du rapport prescripteur: {e}")
-        import traceback
         traceback.print_exc()
         return {}
 
@@ -648,8 +651,6 @@ def report_fosa_prescriber_query(user, **kwargs):
     Génère un rapport listant les prescripteurs et leur volume de prestation.
     """
 
-    import datetime
-    import json
 
     print("Rapport Par Prescripteur", kwargs)
 
@@ -851,7 +852,6 @@ def report_fosa_prescriber_query(user, **kwargs):
         return final_data_serializable
 
     except Exception as e:
-        import traceback
         traceback.print_exc()
         print(f"Erreur lors de la génération du rapport prescripteur: {e}")
         return {}
