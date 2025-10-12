@@ -518,7 +518,8 @@ def report_prescriber_query(user, **kwargs):
                     validity_to__isnull=True
                 )
                 print(f"FOSA autorisées filtrées: {authorized_health_facilities_ids}")
-        
+        else:
+            health_facilities=prescriber.authorized_health_facilities.all()
         health_facilities_tostring_array = [
             {
                 "hf_name": f"{hf.name} - {hf.code}",
@@ -559,14 +560,21 @@ def report_prescriber_query(user, **kwargs):
         ratio_validated = (sum_prestations_validated / sum_prestations_initiated * 100) if sum_prestations_initiated > 0 else 0
         ratio_rejected = (sum_prestations_rejected / sum_prestations_initiated * 100) if sum_prestations_initiated > 0 else 0
 
-        final_data["sum_prestations_initiated"] = sum_prestations_initiated
-        final_data["sum_prestations_validated"] = sum_prestations_validated
-        final_data["sum_prestations_rejected"] = sum_prestations_rejected
-        final_data["nb_person_refered"] = nb_person_refered
-        final_data["ratio_validated"] = round(ratio_validated, 2)
-        final_data["ratio_rejected"] = round(ratio_rejected, 2)
+        final_data["sum_prestations_initiated"] = f"{sum_prestations_initiated:,}".replace(",", ".")
+        final_data["sum_prestations_validated"] = f"{sum_prestations_validated:,}".replace(",", ".")
+        final_data["sum_prestations_rejected"] = f"{sum_prestations_rejected:,}".replace(",", ".")
+        final_data["nb_person_refered"] = f"{nb_person_refered:,}".replace(",", ".")
+        final_data["ratio_validated"] = f"{round(ratio_validated, 2)} %"
+        final_data["ratio_rejected"] = f"{round(ratio_rejected, 2)} %"
 
+
+    
         claims_filtered = claims.filter(validity_to__isnull=True)
+        if claims_filtered.count()==0:
+            final_data["error"]="PAS DE PRESTATIONS DURANT CETTE PERIODE"
+            final_data["claims"]=[]
+            return json.loads(json.dumps(final_data, default=str))
+        
         claims_serialized = []
         
         for claim in claims_filtered:
@@ -703,20 +711,10 @@ def report_fosa_prescriber_query(user, **kwargs):
             date_to__lte=date_to_object,
         )
 
-        if claims.count()==0:
-            # no claim data to process
-            return []
-        
-
-
         # Liste filtrée si on impose un statut
         claims_filtered = claims
         if claim_status and claim_status != "null":
             claims_filtered = claims.filter(status=claim_status)
-
-        if claims_filtered.count()==0:
-            #no filtered claims to process
-            return []
 
 
         active_prescribers = Prescriber.objects.filter(
@@ -737,7 +735,7 @@ def report_fosa_prescriber_query(user, **kwargs):
         sum_montant_valide=0
 
         most_active_prescriber=most_active_prescriber_func(claims_filtered)
-        most_active_prescriber_info=f"{most_active_prescriber.code} - {most_active_prescriber.last_name} {most_active_prescriber.other_names} - {most_active_prescriber.nin}"
+        most_active_prescriber_info=f"{most_active_prescriber.code} - {most_active_prescriber.last_name} {most_active_prescriber.other_names} - {most_active_prescriber.nin}" if most_active_prescriber else ""
 
 
 
@@ -839,11 +837,14 @@ def report_fosa_prescriber_query(user, **kwargs):
             "ratio_rejection":f"{float(average_FOSA_rejection_rate)} %",
             "montant_asked":f"{float(sum_montant_reclame)} KMF",
             "montant_validated":f"{float(sum_montant_valide)} KMF",
-            "abs_diff":f"{float(abs_diff)} KMF",
-            "most_active_prescriber":f"{most_active_prescriber_info}",
+            "abs_diff":f"{float(abs_diff)} KMF" if abs_diff else "0 KMF",
+            "most_active_prescriber":f"{most_active_prescriber_info}" if most_active_prescriber else "",
             "prescriber_stats":prescriber_stats
         }
 
+        if len(prescriber_stats)==0:
+            final_data["error"]="PAS DE PRESTATIONS DURANT CETTE PERIODE"
+        
         # Retourne toute la liste, pas juste le dernier élément
         final_data_serializable= json.loads(json.dumps(final_data, default=str))
         print(final_data_serializable)
