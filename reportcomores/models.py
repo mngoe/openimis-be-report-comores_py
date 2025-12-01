@@ -23,6 +23,7 @@ import json
 from claim.models import ClaimAdmin, Claim, ClaimService, ClaimItem, Prescriber
 from medical.models import Service, Item
 from location.models import HealthFacility
+from policy.values import policy_values
 
 
 
@@ -617,6 +618,56 @@ def report_prescriber_query(user, **kwargs):
         print(f"Erreur lors de la génération du rapport prescripteur: {e}")
         traceback.print_exc()
         return {}
+
+
+def report_cotisation_query(user, **kwargs):
+    date_start = kwargs.get("date_start")
+    date_end = kwargs.get("date_end")
+
+    date_from_object = datetime.datetime.strptime(date_start, "%Y-%m-%d")
+    date_to_object = datetime.datetime.strptime(date_end, "%Y-%m-%d")
+
+    policies=Policy.objects.all().filter(date_from__gte=date_from_object,
+            date_to__lte=date_to_object,polygamous=False)
+    print("policies", policies.count())
+    families=policies.family
+    nbMenageTotal=families.distinct().count()
+    print("families", nbMenageTotal)
+    nbBenefificaire=Insuree.objects.all().filter(family_in=families).count()
+    print ("nbBenefificaire", nbBenefificaire)
+    total_cotisation_attendues=0
+    total_cotisation_persues=0
+    solde_cotisation_attendues=0
+    total_subvention=0
+    for policy in policies:
+        po=policy_values(policy,policy.family,policy,user)
+        total_cotisation_attendues+=po.amount
+    contributions=Premium.objects.all().filter(
+        policy__in=policies,validity_to__isnull=True)
+    for contribution in contributions:
+        if contribution.payer is None:
+            total_cotisation_persues=+contribution.amount
+        else:
+            total_subvention+=contribution.amount
+    solde_cotisation_attendues=total_cotisation_attendues-total_cotisation_persues
+    dictBase =  {
+        "nbMenageTotal": nbMenageTotal,
+        "nbBenefificaire": nbBenefificaire.count(),
+        "total_cotisation_attendues": total_cotisation_attendues,
+        "total_cotisation_persues": total_cotisation_persues,
+        "solde_cotisation_attendues": solde_cotisation_attendues,
+        "total_subvention": total_subvention,
+    }
+    print(dictBase)
+    final_data_serializable= json.loads(json.dumps(dictBase, default=str))
+    print(final_data_serializable)
+
+    return final_data_serializable
+
+
+
+    
+    
 
 
 def get_most_frequent_category(claims):
