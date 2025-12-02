@@ -1,7 +1,7 @@
 from reportcomores.report_templates import rptBeneficiaryAmg, rptInvoiceFosaPrivate,\
-    rptInvoiceFosaPublic, rptMembership,rptPrescripteur,rptFosaPrescripteur
+    rptInvoiceFosaPublic, rptMembership,rptPrescripteur,rptFosaPrescripteur,rptCotisation
 from reportcomores.models import generate_carte_amg_query, invoice_private_fosa_query,\
-    invoice_public_fosa_query, report_membership_query,report_prescriber_query,report_fosa_prescriber_query
+    invoice_public_fosa_query, report_membership_query,report_prescriber_query,report_fosa_prescriber_query,report_cotisation_query
 
 report_definitions = [
     {
@@ -57,5 +57,14 @@ report_definitions = [
         "module": "reportcomores",
         "python_query": report_fosa_prescriber_query,
         "permission": ["131215"],
-    } 
+    },
+    {
+        "name": "cotisation_report",
+        "engine": 0,
+        "default_report": rptCotisation.template,
+        "description": "Rapport de cotisation",
+        "module": "reportcomores",
+        "python_query": report_cotisation_query,
+        "permission": ["131215"],
+    }
 ]

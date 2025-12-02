@@ -23,6 +23,7 @@ import json
 from claim.models import ClaimAdmin, Claim, ClaimService, ClaimItem, Prescriber
 from medical.models import Service, Item
 from location.models import HealthFacility
+from policy.values import policy_values
 
 
 
@@ -617,6 +618,178 @@ def report_prescriber_query(user, **kwargs):
         print(f"Erreur lors de la génération du rapport prescripteur: {e}")
         traceback.print_exc()
         return {}
+
+
+def report_cotisation_query(user, **kwargs):
+    date_start = kwargs.get("date_start")
+    date_end = kwargs.get("date_end")
+
+    date_from_object = datetime.datetime.strptime(date_start, "%Y-%m-%d")
+    date_to_object = datetime.datetime.strptime(date_end, "%Y-%m-%d")
+
+    print("date_from_object", date_from_object)
+    print("date_to_object", date_to_object)
+
+
+    code_vulnerable=['AMOS1', 'AMOS2', 'AMOS3', 'AMOS4']
+
+    policies_vulnerable = Policy.objects.all().filter(
+        enroll_date__gte=date_from_object,
+        enroll_date__lte=date_to_object,
+        # family__polygamous=False,
+        contribution_plan__code__in=code_vulnerable,
+        validity_to__isnull=True
+    )
+
+    print("policies", policies_vulnerable.count())
+    families_vulnerable = Family.objects.all().filter(
+        policies__in=policies_vulnerable,
+        validity_to__isnull=True
+    ).distinct()
+
+    # families = Family.objects.filter(policy__in=policies,validity_to__isnull=True).distinct()
+    # families=policies.family.distinct()
+    nbMenageTotal_vulnerable=families_vulnerable.count()
+    print("families", nbMenageTotal_vulnerable)
+    nbBenefificaire_vulnerable=Insuree.objects.all().filter(
+        family__in=families_vulnerable,
+        validity_to__isnull=True
+        ).count()
+    print ("nbBenefificaire", nbBenefificaire_vulnerable)
+    total_cotisation_attendues_vulnerable=0
+    total_cotisation_persues_vulnerable=0
+    solde_cotisation_attendues_vulnerable=0
+    total_subvention_vulnerable=0
+    for policy in policies_vulnerable:
+        po=policy_values(policy,policy.family,policy,user)
+        total_cotisation_attendues_vulnerable+=po[0].value
+    contributions_vulnerable=Premium.objects.all().filter(
+        policy__in=policies_vulnerable,
+        validity_to__isnull=True
+        )
+    for contribution in contributions_vulnerable:
+        if contribution.payer is None:
+            total_cotisation_persues_vulnerable=+contribution.amount
+        else:
+            total_subvention_vulnerable+=contribution.amount
+    
+    solde_cotisation_attendues_vulnerable=total_cotisation_attendues_vulnerable-total_cotisation_persues_vulnerable
+    dictBase_vulnerable =  {
+        "nbMenageTotal_vulnerable": f"{nbMenageTotal_vulnerable}",
+        "nbBenefificaire_vulnerable": f"{nbBenefificaire_vulnerable}",
+        "total_cotisation_attendues_vulnerable": f"{total_cotisation_attendues_vulnerable}",
+        "total_cotisation_persues_vulnerable": f"{total_cotisation_persues_vulnerable}",
+        "solde_cotisation_attendues_vulnerable": f"{solde_cotisation_attendues_vulnerable}",
+        "total_subvention_vulnerable": f"{total_subvention_vulnerable}",
+    }
+
+    vunlerabledata=[]
+    for family in families_vulnerable:
+        data={}
+        data['head_code']=family.head_insuree.chf_id
+        data['head_name']=family.head_insuree.last_name + " " + family.head_insuree.other_names
+        data['location']=family.location.code +" "+family.location.name  if family.location else ""
+        policies_family=Policy.objects.all().filter(
+            family=family,
+            enroll_date__gte=date_from_object,
+            enroll_date__lte=date_to_object,
+            validity_to__isnull=True
+        )
+        total_cotisation_attendues=0
+        for policy in policies_family:
+            po=policy_values(policy,family,policy,user)
+            total_cotisation_attendues+=po[0].value
+        data['total_cotisation_attendues']=f"{total_cotisation_attendues}"
+        contributions_family=Premium.objects.all().filter(
+            policy__in=policies_family,
+            validity_to__isnull=True
+            )
+        total_cotisation_persues_family=0
+        total_subvention_family=0
+        for contribution in contributions_family:
+            if contribution.payer is None:
+                total_cotisation_persues_family=+contribution.amount
+            else:
+                total_subvention_family+=contribution.amount
+        data['total_cotisation_persues']=f"{total_cotisation_persues_family}"
+        data['total_subvention']=f"{total_subvention_family}"
+        data['solde_cotisation_attendues']=f"{total_cotisation_attendues - total_cotisation_persues_family}"
+        vunlerabledata.append(data)
+
+    #partie demuni 
+    code_demuni=['AMS']
+
+
+    policies_demuni = Policy.objects.all().filter(
+        enroll_date__gte=date_from_object,
+        enroll_date__lte=date_to_object,
+        # family__polygamous=False,
+        contribution_plan__code__in=code_demuni,
+        validity_to__isnull=True
+    )
+    print("policies", policies_demuni.count())
+    families_demuni = Family.objects.all().filter(
+        policies__in=policies_demuni,
+        validity_to__isnull=True
+    ).distinct()
+    nbMenageTotal_demuni=families_demuni.count()
+    print("families", nbMenageTotal_demuni)
+    nbBenefificaire_demuni=Insuree.objects.all().filter(
+        family__in=families_demuni,
+        validity_to__isnull=True
+        ).count()
+    print ("nbBenefificaire", nbBenefificaire_demuni)
+    total_subvention_demuni=0
+
+    contributions_demuni=Premium.objects.all().filter(
+        policy__in=policies_demuni,
+        validity_to__isnull=True
+        )
+    for contribution in contributions_demuni:
+        total_subvention_demuni+=contribution.amount
+    
+
+    dictBase_demuni =  {
+        "nbMenageTotal_demuni": f"{nbMenageTotal_demuni}",
+        "nbBenefificaire_demuni": f"{nbBenefificaire_demuni}",
+        "total_subvention_demuni": f"{total_subvention_demuni}",
+    }
+
+    demuni_data=[]
+    for family in families_demuni:
+        data={}
+        data['head_code']=family.head_insuree.chf_id
+        data['head_name']=family.head_insuree.last_name + " " + family.head_insuree.other_names
+        data['location']=family.location.code +" "+family.location.name  if family.location else ""
+        contributions_family=Premium.objects.all().filter(
+            policy__in=policies_demuni,
+            validity_to__isnull=True
+            )
+        total_subvention_family=0
+        for contribution in contributions_family:
+                total_subvention_family+=contribution.amount
+        data['total_subvention']=f"{total_subvention_family}"
+        demuni_data.append(data)
+
+    finaldict = {
+        **dictBase_demuni,
+        **dictBase_vulnerable,
+        "vulnerabledata": vunlerabledata,
+        "demunidata": demuni_data,
+    }
+
+
+
+    print(finaldict)
+    final_data_serializable= json.loads(json.dumps(finaldict, default=str))
+    print(final_data_serializable)
+
+    return final_data_serializable
+
+
+
+    
+    
 
 
 def get_most_frequent_category(claims):
