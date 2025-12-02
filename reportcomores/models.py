@@ -636,8 +636,9 @@ def report_cotisation_query(user, **kwargs):
     policies_vulnerable = Policy.objects.all().filter(
         enroll_date__gte=date_from_object,
         enroll_date__lte=date_to_object,
-        family__polygamous=False,
-        contribution__code__in=code_vulnerable,
+        # family__polygamous=False,
+        contribution_plan__code__in=code_vulnerable,
+        validity_to__isnull=True
     )
 
     print("policies", policies_vulnerable.count())
@@ -722,8 +723,9 @@ def report_cotisation_query(user, **kwargs):
     policies_demuni = Policy.objects.all().filter(
         enroll_date__gte=date_from_object,
         enroll_date__lte=date_to_object,
-        family__polygamous=False,
-        contribution__code__in=code_demuni,
+        # family__polygamous=False,
+        contribution_plan__code__in=code_demuni,
+        validity_to__isnull=True
     )
     print("policies", policies_demuni.count())
     families_demuni = Family.objects.all().filter(
