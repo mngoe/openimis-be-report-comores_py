@@ -693,6 +693,7 @@ def report_cotisation_query(user, **kwargs):
             family=family,
             enroll_date__gte=date_from_object,
             enroll_date__lte=date_to_object,
+            contribution_plan__code__in=code_vulnerable,
             validity_to__isnull=True
         )
         total_cotisation_attendues=0
@@ -761,8 +762,15 @@ def report_cotisation_query(user, **kwargs):
         data['head_code']=family.head_insuree.chf_id
         data['head_name']=family.head_insuree.last_name + " " + family.head_insuree.other_names
         data['location']=family.location.code +" "+family.location.name  if family.location else ""
+        policies_family=Policy.objects.all().filter(
+            family=family,
+            enroll_date__gte=date_from_object,
+            enroll_date__lte=date_to_object,
+            contribution_plan__code__in=code_demuni,
+            validity_to__isnull=True
+        )
         contributions_family=Premium.objects.all().filter(
-            policy__in=policies_demuni,
+            policy__in=policies_family,
             validity_to__isnull=True
             )
         total_subvention_family=0
