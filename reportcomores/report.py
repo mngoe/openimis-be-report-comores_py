@@ -1,4 +1,4 @@
-from reportcomores.report_templates import rptBeneficiaryAmg, rptInvoiceFosaPrivate,\
+from reportcomores.report_templates import reportAMG_recto, reportAMG_verso, rptInvoiceFosaPrivate,\
     rptInvoiceFosaPublic, rptMembership,rptPrescripteur,rptFosaPrescripteur,rptCotisation
 from reportcomores.models import generate_carte_amg_query, invoice_private_fosa_query,\
     invoice_public_fosa_query, report_membership_query,report_prescriber_query,report_fosa_prescriber_query,report_cotisation_query
@@ -7,7 +7,16 @@ report_definitions = [
     {
         "name": "carte_amg",
         "engine": 0,
-        "default_report": rptBeneficiaryAmg.template,
+        "default_report": reportAMG_recto.template,
+        "description": "Carte AMG",
+        "module": "reportcomores",
+        "python_query": generate_carte_amg_query,
+        "permission": ["131215"],
+    },
+    {
+        "name": "carte_amg_verso",
+        "engine": 0,
+        "default_report": reportAMG_verso.template,
         "description": "Carte AMG",
         "module": "reportcomores",
         "python_query": generate_carte_amg_query,
