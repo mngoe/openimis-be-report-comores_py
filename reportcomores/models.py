@@ -321,6 +321,10 @@ def generate_carte_amg_query(user, **kwargs):
                 data["FullFathersName"] = chef_menage
                 data["chfid"] = chfid
                 data["FullMothersName"] = conjointe
+                print(len(data["FullFathersName"]))
+                if len(data["FullFathersName"]) < 18:
+                    # On ajoute un retour a ligne pour pousser vers les bas
+                    data["FullMothersName"] = "\n\n" + data["FullMothersName"]
                 data["chfid2"] = chfid2
         else:
             # Pas de famille associée : fallback
